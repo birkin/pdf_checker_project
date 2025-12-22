@@ -22,4 +22,4 @@ prod = [
 ci_tests = []
 
 [tool.uv]
-exclude-newer = '1 week'  # generates the `[options]` in `uv.lock`
+exclude-newer = "1 week"  # generates the `[options]` in `uv.lock`
