@@ -21,7 +21,6 @@ This document outlines the implementation plan for the initial PDF upload form f
 - Queue/worker architecture
 - WebSockets or real-time updates
 - Batch processing
-- Authentication/authorization
 - Advanced caching strategies
 
 ## Technical Components
@@ -33,12 +32,18 @@ This document outlines the implementation plan for the initial PDF upload form f
 # pdf_checker_app/models.py
 class PDFDocument(models.Model):
     """
-    Stores uploaded PDF document metadata.
+    Stores uploaded PDF document metadata and Shibboleth user info.
     """
     # File identification
     original_filename = models.CharField(max_length=255)
     file_checksum = models.CharField(max_length=64, unique=True, db_index=True)  # SHA-256
     file_size = models.BigIntegerField()  # bytes
+    
+    # Shibboleth user information
+    user_first_name = models.CharField(max_length=100, blank=True)
+    user_last_name = models.CharField(max_length=100, blank=True)
+    user_email = models.EmailField(blank=True)
+    user_groups = models.JSONField(default=list, blank=True)  # List of groups
     
     # Timestamps
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -94,39 +99,6 @@ class VeraPDFResult(models.Model):
     passed_checks = models.IntegerField(default=0)
 ```
 
-#### AccessibilityIssue Model
-```python
-class AccessibilityIssue(models.Model):
-    """
-    Individual accessibility issues found by veraPDF.
-    """
-    # Relationship
-    verapdf_result = models.ForeignKey(
-        VeraPDFResult,
-        on_delete=models.CASCADE,
-        related_name='issues'
-    )
-    
-    # Issue details
-    rule_id = models.CharField(max_length=50)  # e.g., "7.1-1"
-    severity = models.CharField(
-        max_length=20,
-        choices=[
-            ('error', 'Error'),
-            ('warning', 'Warning'),
-            ('info', 'Info'),
-        ]
-    )
-    description = models.TextField()
-    location = models.CharField(max_length=255, blank=True)  # Page/element reference
-    
-    # Occurrence tracking
-    occurrence_count = models.IntegerField(default=1)
-    
-    class Meta:
-        ordering = ['severity', 'rule_id']
-```
-
 ### 2. Forms
 
 #### PDF Upload Form
@@ -180,7 +152,19 @@ from django.urls import reverse
 import hashlib
 from .forms import PDFUploadForm
 from .models import PDFDocument, VeraPDFResult
-from .lib.verapdf_processor import VeraPDFProcessor
+
+def get_shibboleth_user_info(request) -> dict:
+    """
+    Extracts Shibboleth user information from request headers.
+    """
+    # These header names may vary depending on your Shibboleth configuration
+    # Adjust as needed based on your Shibboleth SP configuration
+    return {
+        'first_name': request.META.get('HTTP_SHIB_GIVEN_NAME', ''),
+        'last_name': request.META.get('HTTP_SHIB_SN', ''),
+        'email': request.META.get('HTTP_SHIB_MAIL', ''),
+        'groups': request.META.get('HTTP_SHIB_GROUPS', '').split(';') if request.META.get('HTTP_SHIB_GROUPS') else [],
+    }
 
 def upload_pdf(request):
     """
@@ -190,6 +174,9 @@ def upload_pdf(request):
         form = PDFUploadForm(request.POST, request.FILES)
         if form.is_valid():
             pdf_file = form.cleaned_data['pdf_file']
+            
+            # Get Shibboleth user info
+            user_info = get_shibboleth_user_info(request)
             
             # Generate checksum
             checksum = generate_checksum(pdf_file)
@@ -203,12 +190,16 @@ def upload_pdf(request):
                 messages.info(request, 'This PDF has already been processed.')
                 return redirect('pdf_checker_app:report', pk=existing_doc.pk)
             
-            # Create new document record
+            # Create new document record with Shibboleth user info
             if not existing_doc:
                 doc = PDFDocument.objects.create(
                     original_filename=pdf_file.name,
                     file_checksum=checksum,
                     file_size=pdf_file.size,
+                    user_first_name=user_info['first_name'],
+                    user_last_name=user_info['last_name'],
+                    user_email=user_info['email'],
+                    user_groups=user_info['groups'],
                     processing_status='pending'
                 )
             else:
@@ -217,24 +208,10 @@ def upload_pdf(request):
             # Save temporary file for processing
             temp_path = save_temp_file(pdf_file, checksum)
             
-            # Process with veraPDF (synchronous for now)
-            try:
-                processor = VeraPDFProcessor()
-                result = processor.process(temp_path, doc)
-                
-                messages.success(request, 'PDF successfully analyzed.')
-                return redirect('pdf_checker_app:report', pk=doc.pk)
-                
-            except Exception as e:
-                doc.processing_status = 'failed'
-                doc.processing_error = str(e)
-                doc.save()
-                messages.error(request, f'Processing failed: {e}')
-            
-            finally:
-                # Clean up temp file
-                if temp_path.exists():
-                    temp_path.unlink()
+            # TODO: Process with veraPDF (will be implemented separately)
+            # For now, just mark as pending and redirect
+            messages.success(request, 'PDF uploaded successfully and queued for processing.')
+            return redirect('pdf_checker_app:report', pk=doc.pk)
     else:
         form = PDFUploadForm()
     
@@ -252,163 +229,26 @@ def generate_checksum(file) -> str:
     return sha256_hash.hexdigest()
 ```
 
-#### Report View
+#### Report View (Stub)
 ```python
 def view_report(request, pk: int):
     """
     Displays the accessibility report for a processed PDF.
+    (STUB - to be fully implemented later)
     """
     doc = get_object_or_404(PDFDocument, pk=pk)
     
-    if doc.processing_status != 'completed':
-        messages.warning(request, 'This PDF is still being processed.')
-        return redirect('pdf_checker_app:upload')
-    
-    try:
-        result = doc.verapdf_result
-        issues = result.issues.all()
-        
-        # Group issues by severity
-        issues_by_severity = {
-            'error': issues.filter(severity='error'),
-            'warning': issues.filter(severity='warning'),
-            'info': issues.filter(severity='info'),
-        }
-        
-    except VeraPDFResult.DoesNotExist:
-        messages.error(request, 'No results found for this PDF.')
-        return redirect('pdf_checker_app:upload')
+    # TODO: Implement full report display logic
+    # For now, just show basic document info and status
     
     return render(request, 'pdf_checker_app/report.html', {
         'document': doc,
-        'result': result,
-        'issues_by_severity': issues_by_severity,
     })
 ```
 
-### 4. veraPDF Integration
+### 4. veraPDF Integration (Future Implementation)
 
-#### VeraPDF Processor Class
-```python
-# pdf_checker_app/lib/verapdf_processor.py
-import subprocess
-import json
-from pathlib import Path
-from django.conf import settings
-from ..models import PDFDocument, VeraPDFResult, AccessibilityIssue
-
-class VeraPDFProcessor:
-    """
-    Handles veraPDF command execution and result parsing.
-    """
-    
-    def __init__(self):
-        self.verapdf_path = settings.VERAPDF_PATH  # e.g., '/usr/local/bin/verapdf'
-        self.profile = settings.VERAPDF_PROFILE  # e.g., 'PDFUA_1_MACHINE'
-        
-    def process(self, pdf_path: Path, document: PDFDocument) -> VeraPDFResult:
-        """
-        Runs veraPDF on the PDF and stores results.
-        """
-        document.processing_status = 'processing'
-        document.save()
-        
-        try:
-            # Run veraPDF command
-            cmd = [
-                self.verapdf_path,
-                '--format', 'json',
-                '--profile', self.profile,
-                str(pdf_path)
-            ]
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=60  # 60 second timeout
-            )
-            
-            if result.returncode != 0:
-                raise Exception(f"veraPDF error: {result.stderr}")
-            
-            # Parse JSON output
-            verapdf_data = json.loads(result.stdout)
-            
-            # Create result record
-            verapdf_result = self._save_result(document, verapdf_data)
-            
-            # Parse and save issues
-            self._save_issues(verapdf_result, verapdf_data)
-            
-            # Update document status
-            document.processing_status = 'completed'
-            document.save()
-            
-            return verapdf_result
-            
-        except Exception as e:
-            document.processing_status = 'failed'
-            document.processing_error = str(e)
-            document.save()
-            raise
-    
-    def _save_result(self, document: PDFDocument, verapdf_data: dict) -> VeraPDFResult:
-        """
-        Saves the main veraPDF result.
-        """
-        # Extract summary information
-        report = verapdf_data.get('report', {})
-        details = report.get('details', {})
-        
-        # Determine pass/fail
-        is_accessible = details.get('failedRules', 0) == 0
-        
-        return VeraPDFResult.objects.create(
-            pdf_document=document,
-            raw_json=verapdf_data,
-            is_accessible=is_accessible,
-            validation_profile=report.get('profileName', 'Unknown'),
-            verapdf_version=verapdf_data.get('release', {}).get('version', 'Unknown'),
-            total_checks=details.get('totalRules', 0),
-            failed_checks=details.get('failedRules', 0),
-            passed_checks=details.get('passedRules', 0)
-        )
-    
-    def _save_issues(self, verapdf_result: VeraPDFResult, verapdf_data: dict):
-        """
-        Parses and saves individual accessibility issues.
-        """
-        report = verapdf_data.get('report', {})
-        
-        # Get validation details
-        for detail in report.get('details', {}).get('rule', []):
-            if detail.get('status') != 'failed':
-                continue
-            
-            # Map veraPDF status to our severity levels
-            severity = self._map_severity(detail.get('level', 'error'))
-            
-            AccessibilityIssue.objects.create(
-                verapdf_result=verapdf_result,
-                rule_id=detail.get('clause', 'Unknown'),
-                severity=severity,
-                description=detail.get('description', 'No description available'),
-                location=detail.get('location', ''),
-                occurrence_count=detail.get('failedChecks', 1)
-            )
-    
-    def _map_severity(self, verapdf_level: str) -> str:
-        """
-        Maps veraPDF severity levels to our internal levels.
-        """
-        mapping = {
-            'SHALL': 'error',
-            'SHOULD': 'warning',
-            'MAY': 'info',
-        }
-        return mapping.get(verapdf_level.upper(), 'error')
-```
+*Note: The VeraPDF Processor class will be implemented in a later phase. For the initial upload form implementation, we'll focus on capturing the file and storing it in the database with user information.*
 
 ### 5. Templates
 
@@ -545,16 +385,16 @@ class VeraPDFProcessor:
 {% endblock %}
 ```
 
-#### Report Template
+#### Report Template (Stub)
 ```html
 <!-- pdf_checker_app/templates/pdf_checker_app/report.html -->
 {% extends "pdf_checker_app/base.html" %}
 
-{% block title %}Accessibility Report - {{ document.original_filename }}{% endblock %}
+{% block title %}Report - {{ document.original_filename }}{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h1>Accessibility Report</h1>
+    <h1>PDF Processing Report</h1>
     
     <div class="document-info">
         <h2>Document Information</h2>
@@ -562,61 +402,42 @@ class VeraPDFProcessor:
             <dt>File:</dt>
             <dd>{{ document.original_filename }}</dd>
             
+            <dt>Uploaded by:</dt>
+            <dd>{{ document.user_first_name }} {{ document.user_last_name }} ({{ document.user_email }})</dd>
+            
             <dt>Uploaded:</dt>
             <dd>{{ document.uploaded_at|date:"Y-m-d H:i" }}</dd>
             
             <dt>Size:</dt>
             <dd>{{ document.file_size|filesizeformat }}</dd>
+            
+            <dt>Status:</dt>
+            <dd>{{ document.get_processing_status_display }}</dd>
         </dl>
     </div>
     
-    <div class="result-summary">
-        <h2>Accessibility Status</h2>
-        {% if result.is_accessible %}
-            <div class="status-pass">
-                ✓ PASSED - This PDF meets accessibility standards
-            </div>
-        {% else %}
-            <div class="status-fail">
-                ✗ FAILED - This PDF has accessibility issues
-            </div>
-        {% endif %}
-        
-        <div class="stats">
-            <span>Total Checks: {{ result.total_checks }}</span>
-            <span>Passed: {{ result.passed_checks }}</span>
-            <span>Failed: {{ result.failed_checks }}</span>
-        </div>
+    {% if document.processing_status == 'pending' %}
+    <div class="status-pending">
+        <p>This PDF is queued for processing. Please check back later.</p>
     </div>
-    
-    {% if not result.is_accessible %}
-    <div class="issues-section">
-        <h2>Accessibility Issues</h2>
-        
-        {% for severity, issues in issues_by_severity.items %}
-            {% if issues %}
-            <div class="severity-group severity-{{ severity }}">
-                <h3>{{ severity|title }}s ({{ issues|length }})</h3>
-                <ul>
-                    {% for issue in issues %}
-                    <li>
-                        <strong>Rule {{ issue.rule_id }}:</strong>
-                        {{ issue.description }}
-                        {% if issue.occurrence_count > 1 %}
-                            <span class="occurrence-count">({{ issue.occurrence_count }} occurrences)</span>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        {% endfor %}
+    {% elif document.processing_status == 'processing' %}
+    <div class="status-processing">
+        <p>This PDF is currently being processed. Please check back shortly.</p>
+    </div>
+    {% elif document.processing_status == 'failed' %}
+    <div class="status-failed">
+        <p>Processing failed: {{ document.processing_error }}</p>
+    </div>
+    {% elif document.processing_status == 'completed' %}
+    <div class="status-completed">
+        <!-- TODO: Display actual veraPDF results once processing is implemented -->
+        <p>Processing complete. Detailed results will be displayed here.</p>
     </div>
     {% endif %}
     
     <div class="actions">
         <a href="{% url 'pdf_checker_app:upload' %}" class="btn btn-secondary">
-            Check Another PDF
+            Upload Another PDF
         </a>
     </div>
 </div>
@@ -774,6 +595,11 @@ After this initial implementation is working:
 
 ## Notes
 
+- The entire web form will be protected by Shibboleth authentication
+- Shibboleth provides user information (first name, last name, email, groups) via headers
+- No individual AccessibilityIssue records - all issue details remain in the raw JSON
+- Report view and template are stubbed for initial implementation
+- VeraPDF processor implementation deferred to focus on upload form first
 - This plan follows the CSS-first approach with minimal JavaScript
 - No WebSockets or real-time updates in initial version
 - Synchronous processing initially (async via cronjob later)
