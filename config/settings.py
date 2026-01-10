@@ -195,3 +195,17 @@ LOGGING = {
         # },
     },
 }
+
+
+## app-level settings -----------------------------------------------
+
+## veraPDF Configuration
+VERAPDF_PATH = os.environ['VERAPDF_PATH']
+VERAPDF_PROFILE = os.environ['VERAPDF_PROFILE']  # for now using `PDFUA_1_MACHINE`
+
+## File Upload Settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+
+## Temp file storage
+PDF_UPLOAD_PATH = os.environ['PDF_UPLOAD_PATH']

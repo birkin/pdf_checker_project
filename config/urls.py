@@ -5,6 +5,8 @@ from pdf_checker_app import views
 
 urlpatterns = [
     ## main ---------------------------------------------------------
+    path('pdf/', views.upload_pdf, name='pdf_upload_url'),
+    path('pdf/report/<int:pk>/', views.view_report, name='pdf_report_url'),
     path('info/', views.info, name='info_url'),
     ## other --------------------------------------------------------
     path('', views.root, name='root_url'),

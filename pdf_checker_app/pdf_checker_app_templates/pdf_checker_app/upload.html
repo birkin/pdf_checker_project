@@ -1,0 +1,62 @@
+{% extends "pdf_checker_app/base.html" %}
+
+{% block title %}Upload PDF - PDF Accessibility Checker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>PDF Accessibility Checker</h1>
+    <p>Upload a PDF document to check its accessibility compliance using veraPDF.</p>
+    
+    <form method="post" enctype="multipart/form-data" id="upload-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            {{ form.pdf_file.label_tag }}
+            {{ form.pdf_file }}
+            {% if form.pdf_file.help_text %}
+                <small class="help-text">{{ form.pdf_file.help_text }}</small>
+            {% endif %}
+            {% if form.pdf_file.errors %}
+                <div class="error">{{ form.pdf_file.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div id="drop-zone" class="drop-zone">
+            <p>Or drag and drop your PDF here</p>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">
+            Check Accessibility
+        </button>
+    </form>
+</div>
+
+<script>
+    // Simple drag-and-drop enhancement
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('id_pdf_file');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+        }
+    });
+    
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+</script>
+{% endblock %}
