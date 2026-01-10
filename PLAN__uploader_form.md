@@ -1,5 +1,9 @@
 # PDF Upload Form Implementation Plan
 
+- review `pdf_checker_project/PLAN__high-level-implementation.md` for background
+
+- review `pdf_checker_project/AGENTS.md` for coding directives.
+
 ## Overview
 
 This document outlines the implementation plan for the initial PDF upload form feature, focusing on a simple web interface (no API) that performs basic PDF accessibility checking using veraPDF.
