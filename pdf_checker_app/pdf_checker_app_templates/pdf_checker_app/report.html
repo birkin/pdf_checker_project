@@ -1,0 +1,53 @@
+{% extends "pdf_checker_app/base.html" %}
+
+{% block title %}Report - {{ document.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>PDF Processing Report</h1>
+    
+    <div class="document-info">
+        <h2>Document Information</h2>
+        <dl>
+            <dt>File:</dt>
+            <dd>{{ document.original_filename }}</dd>
+            
+            <dt>Uploaded by:</dt>
+            <dd>{{ document.user_first_name }} {{ document.user_last_name }} {% if document.user_email %}({{ document.user_email }}){% endif %}</dd>
+            
+            <dt>Uploaded:</dt>
+            <dd>{{ document.uploaded_at|date:"Y-m-d H:i" }}</dd>
+            
+            <dt>Size:</dt>
+            <dd>{{ document.file_size|filesizeformat }}</dd>
+            
+            <dt>Status:</dt>
+            <dd>{{ document.get_processing_status_display }}</dd>
+        </dl>
+    </div>
+    
+    {% if document.processing_status == 'pending' %}
+    <div class="status-pending">
+        <p>This PDF is queued for processing. Please check back later.</p>
+    </div>
+    {% elif document.processing_status == 'processing' %}
+    <div class="status-processing">
+        <p>This PDF is currently being processed. Please check back shortly.</p>
+    </div>
+    {% elif document.processing_status == 'failed' %}
+    <div class="status-failed">
+        <p><strong>Processing failed:</strong> {{ document.processing_error }}</p>
+    </div>
+    {% elif document.processing_status == 'completed' %}
+    <div class="status-completed">
+        <p>Processing complete. Detailed results will be displayed here.</p>
+    </div>
+    {% endif %}
+    
+    <div class="actions">
+        <a href="{% url 'pdf_upload_url' %}" class="btn btn-secondary">
+            Upload Another PDF
+        </a>
+    </div>
+</div>
+{% endblock %}

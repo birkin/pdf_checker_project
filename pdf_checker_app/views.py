@@ -1,14 +1,20 @@
 import datetime
+import hashlib
 import json
 import logging
+from pathlib import Path
 
 import trio
 from django.conf import settings as project_settings
+from django.contrib import messages
+from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from pdf_checker_app.lib import version_helper
 from django.urls import reverse
 from pdf_checker_app.lib.version_helper import GatherCommitAndBranchData
+from pdf_checker_app.forms import PDFUploadForm
+from pdf_checker_app.models import PDFDocument
 
 
 log = logging.getLogger(__name__)
@@ -85,3 +91,118 @@ def version(request):
 
 def root(request):
     return HttpResponseRedirect(reverse('info_url'))
+
+
+# -------------------------------------------------------------------
+# pdf upload and processing
+# -------------------------------------------------------------------
+
+
+def get_shibboleth_user_info(request) -> dict[str, str | list[str]]:
+    """
+    Extracts Shibboleth user information from request headers.
+    """
+    ## These header names may vary depending on your Shibboleth configuration
+    ## Adjust as needed based on your Shibboleth SP configuration
+    return {
+        'first_name': request.META.get('HTTP_SHIB_GIVEN_NAME', ''),
+        'last_name': request.META.get('HTTP_SHIB_SN', ''),
+        'email': request.META.get('HTTP_SHIB_MAIL', ''),
+        'groups': request.META.get('HTTP_SHIB_GROUPS', '').split(';') if request.META.get('HTTP_SHIB_GROUPS') else [],
+    }
+
+
+def generate_checksum(file: UploadedFile) -> str:
+    """
+    Generates SHA-256 checksum for uploaded file.
+    """
+    sha256_hash = hashlib.sha256()
+    for chunk in file.chunks():
+        sha256_hash.update(chunk)
+    return sha256_hash.hexdigest()
+
+
+def save_temp_file(file: UploadedFile, checksum: str) -> Path:
+    """
+    Saves uploaded file to temporary storage.
+    """
+    temp_dir = Path(project_settings.BASE_DIR) / 'tmp' / 'uploads'
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / f'{checksum}.pdf'
+    
+    with open(temp_path, 'wb') as dest:
+        for chunk in file.chunks():
+            dest.write(chunk)
+    
+    return temp_path
+
+
+def upload_pdf(request):
+    """
+    Handles PDF upload and initiates processing.
+    """
+    log.debug('starting upload_pdf()')
+    if request.method == 'POST':
+        form = PDFUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            pdf_file = form.cleaned_data['pdf_file']
+            
+            ## Get Shibboleth user info
+            user_info = get_shibboleth_user_info(request)
+            
+            ## Generate checksum
+            checksum = generate_checksum(pdf_file)
+            
+            ## Check if already processed
+            existing_doc = PDFDocument.objects.filter(
+                file_checksum=checksum
+            ).first()
+            
+            if existing_doc and existing_doc.processing_status == 'completed':
+                messages.info(request, 'This PDF has already been processed.')
+                return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': existing_doc.pk}))
+            
+            ## Create new document record with Shibboleth user info
+            if not existing_doc:
+                doc = PDFDocument.objects.create(
+                    original_filename=pdf_file.name,
+                    file_checksum=checksum,
+                    file_size=pdf_file.size,
+                    user_first_name=user_info['first_name'],
+                    user_last_name=user_info['last_name'],
+                    user_email=user_info['email'],
+                    user_groups=user_info['groups'],
+                    processing_status='pending'
+                )
+            else:
+                doc = existing_doc
+            
+            ## Save temporary file for processing
+            temp_path = save_temp_file(pdf_file, checksum)
+            log.debug(f'saved temp file to {temp_path}')
+            
+            ## TODO: Process with veraPDF (will be implemented separately)
+            ## For now, just mark as pending and redirect
+            messages.success(request, 'PDF uploaded successfully and queued for processing.')
+            return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
+    else:
+        form = PDFUploadForm()
+    
+    return render(request, 'pdf_checker_app/upload.html', {
+        'form': form
+    })
+
+
+def view_report(request, pk: int):
+    """
+    Displays the accessibility report for a processed PDF.
+    """
+    log.debug(f'starting view_report() for pk={pk}')
+    doc = get_object_or_404(PDFDocument, pk=pk)
+    
+    ## TODO: Implement full report display logic
+    ## For now, just show basic document info and status
+    
+    return render(request, 'pdf_checker_app/report.html', {
+        'document': doc,
+    })
