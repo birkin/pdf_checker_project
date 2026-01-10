@@ -286,10 +286,17 @@ Developer-comment:
 - `langchain` or similar - LLM abstraction
 
 ### Frontend Technologies
+Original plan:
 - Modern CSS framework (Bootstrap, Tailwind)
 - JavaScript for interactivity
 - HTMX for progressive enhancement
-- WebSockets/SSE for real-time updates
+- ~~WebSockets/SSE for real-time updates~~
+
+Developer-comment:
+- Lead with CSS; use JavaScript where necessary.
+- I like HTMX.
+- No websockets.
+
 
 ## Next Steps
 
