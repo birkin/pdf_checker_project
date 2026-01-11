@@ -131,6 +131,7 @@ EMAIL_PORT = 1025
 ## user uploaded files ----------------------------------------------
 MEDIA_ROOT = '/tmp/'
 BDR_API_FILE_PATH_ROOT = '/tmp/'
+PDF_UPLOAD_PATH = '/tmp/pdf_uploads'
 """
 The two settings below prevent django from auto-running chmod on uploaded files
     (which can cause permission issues when using a shared volume)

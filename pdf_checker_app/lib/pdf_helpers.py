@@ -41,19 +41,37 @@ def generate_checksum(file: UploadedFile) -> str:
     return sha256_hash.hexdigest()
 
 
-def save_temp_file(file: UploadedFile, checksum: str) -> Path:
+def save_pdf_file(file: UploadedFile, checksum: str) -> Path:
     """
     Saves uploaded file to temporary storage.
+    Called by views.upload_pdf().
     """
-    temp_dir = Path(project_settings.BASE_DIR) / 'tmp' / 'uploads'
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = temp_dir / f'{checksum}.pdf'
+    upload_dir_path = project_settings.PDF_UPLOAD_PATH
+    upload_dir_path.mkdir(parents=True, exist_ok=True)
+    upload_pdf_path = upload_dir_path / f'{checksum}.pdf'
 
-    with open(temp_path, 'wb') as dest:
+    with open(upload_pdf_path, 'wb') as dest:
         for chunk in file.chunks():
             dest.write(chunk)
 
-    return temp_path
+    return upload_pdf_path
+
+
+# def save_temp_file(file: UploadedFile, checksum: str) -> Path:
+#     """
+#     Saves uploaded file to temporary storage.
+#     """
+#     temp_dir = Path(project_settings.PDF_UPLOAD_PATH).expanduser()
+#     if not temp_dir.is_absolute():
+#         temp_dir = Path(project_settings.BASE_DIR) / temp_dir
+#     temp_dir.mkdir(parents=True, exist_ok=True)
+#     temp_path = temp_dir / f'{checksum}.pdf'
+
+#     with open(temp_path, 'wb') as dest:
+#         for chunk in file.chunks():
+#             dest.write(chunk)
+
+#     return temp_path
 
 
 def run_verapdf(pdf_path: Path, verapdf_cli_path: Path) -> str:

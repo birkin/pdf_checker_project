@@ -138,7 +138,7 @@ def upload_pdf(request):
 
             try:
                 ## Save temporary file for processing
-                pdf_path = pdf_helpers.save_temp_file(pdf_file, checksum)
+                pdf_path = pdf_helpers.save_pdf_file(pdf_file, checksum)
                 log.debug(f'saved temp file to {pdf_path}')
 
                 ## Process with veraPDF
@@ -178,11 +178,7 @@ def view_report(request, pk: uuid.UUID):
     doc = get_object_or_404(PDFDocument, pk=pk)
     verapdf_raw_json = None
     if doc.processing_status == 'completed':
-        verapdf_raw_json_data = (
-            VeraPDFResult.objects.filter(pdf_document=doc)
-            .values_list('raw_json', flat=True)
-            .first()
-        )
+        verapdf_raw_json_data = VeraPDFResult.objects.filter(pdf_document=doc).values_list('raw_json', flat=True).first()
         if verapdf_raw_json_data is not None:
             verapdf_raw_json = json.dumps(verapdf_raw_json_data, indent=2)
 
