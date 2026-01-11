@@ -36,7 +36,7 @@
     </div>
     {% elif document.processing_status == 'failed' %}
     <div class="status-failed">
-        <p><strong>Processing failed:</strong> {{ document.processing_error }}</p>
+        <p><strong>Processing failed:</strong> Try again; if this continues, use the feedback link above.</p>
     </div>
     {% elif document.processing_status == 'completed' %}
     <div class="status-completed">
