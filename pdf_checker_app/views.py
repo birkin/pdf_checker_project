@@ -133,10 +133,15 @@ def upload_pdf(request):
                 doc = existing_doc
 
             ## Save temporary file for processing
-            temp_path = pdf_helpers.save_temp_file(pdf_file, checksum)
-            log.debug(f'saved temp file to {temp_path}')
+            pdf_path = pdf_helpers.save_temp_file(pdf_file, checksum)
+            log.debug(f'saved temp file to {pdf_path}')
 
-            ## TODO: Process with veraPDF (will be implemented separately)
+            ## Process with veraPDF
+            verapdf_raw_json = pdf_helpers.run_verapdf(pdf_path, project_settings.VERAPDF_PATH)
+
+            ## Parse output
+            parsed_verapdf_output = pdf_helpers.parse_verapdf_output(verapdf_raw_json)
+
             ## For now, just mark as pending and redirect
             messages.success(request, 'PDF uploaded successfully and queued for processing.')
             return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))

@@ -4,6 +4,7 @@ Helper functions for PDF processing.
 
 import hashlib
 import logging
+import subprocess
 from pathlib import Path
 
 from django.conf import settings as project_settings
@@ -49,3 +50,40 @@ def save_temp_file(file: UploadedFile, checksum: str) -> Path:
             dest.write(chunk)
 
     return temp_path
+
+
+def run_verapdf(pdf_path: Path, verapdf_cli_path: Path) -> dict[str, str]:
+    """
+    Runs veraPDF on a temporary file and returns the raw-json-output.
+    Called by views.upload_pdf().
+
+    Command flags:
+    -f ua1 (PDF/UA-1 validation profile)
+    --maxfailuresdisplayed 999999 (show all failures)
+    --format json (output format)
+    --success (include success messages) -- disabled to reduce the size of the output
+    str(pdf_path) (path to pdf)
+
+    """
+    ## build command ------------------------------------------------
+    command: list[str] = [
+        str(verapdf_cli_path),
+        '-f',
+        'ua1',
+        '--maxfailuresdisplayed',
+        '999999',
+        '--format',
+        'json',
+        # '--success',  ## removing this significantly reduces the output
+        str(pdf_path),
+    ]
+    ## run command --------------------------------------------------
+    completed_process = subprocess.run(
+        command,
+        cwd='.',
+        capture_output=True,
+        text=True,
+    )
+    output = str(completed_process.stdout)
+    log.debug(f'output, ``{output}``')
+    return output
