@@ -3,12 +3,16 @@ Helper functions for PDF processing.
 """
 
 import hashlib
+import json
 import logging
 import subprocess
+import uuid
 from pathlib import Path
 
 from django.conf import settings as project_settings
 from django.core.files.uploadedfile import UploadedFile
+
+from pdf_checker_app.models import VeraPDFResult
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +56,7 @@ def save_temp_file(file: UploadedFile, checksum: str) -> Path:
     return temp_path
 
 
-def run_verapdf(pdf_path: Path, verapdf_cli_path: Path) -> dict[str, str]:
+def run_verapdf(pdf_path: Path, verapdf_cli_path: Path) -> str:
     """
     Runs veraPDF on a temporary file and returns the raw-json-output.
     Called by views.upload_pdf().
@@ -87,3 +91,32 @@ def run_verapdf(pdf_path: Path, verapdf_cli_path: Path) -> dict[str, str]:
     output = str(completed_process.stdout)
     log.debug(f'output, ``{output}``')
     return output
+
+
+def parse_verapdf_output(raw_output: str) -> dict[str, object]:
+    """
+    Parses the raw veraPDF JSON output into a Python dictionary.
+    """
+    parsed_output = json.loads(raw_output)
+    if not isinstance(parsed_output, dict):
+        raise ValueError('veraPDF output is not a JSON object.')
+    return parsed_output
+
+
+def save_verapdf_result(document_id: uuid.UUID, raw_json: dict[str, object]) -> VeraPDFResult:
+    """
+    Persists raw veraPDF JSON output for a document.
+    """
+    result, created = VeraPDFResult.objects.get_or_create(
+        pdf_document_id=document_id,
+        defaults={
+            'raw_json': raw_json,
+            'is_accessible': False,
+            'validation_profile': 'PDF/UA-1',
+            'verapdf_version': 'unknown',
+        },
+    )
+    if not created:
+        result.raw_json = raw_json
+        result.save(update_fields=['raw_json'])
+    return result

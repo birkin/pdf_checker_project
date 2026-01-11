@@ -40,8 +40,17 @@
     </div>
     {% elif document.processing_status == 'completed' %}
     <div class="status-completed">
-        <p>Processing complete. Detailed results will be displayed here.</p>
+        <p>Summary coming soon.</p>
     </div>
+    {% if verapdf_raw_json %}
+    <div class="raw-json">
+        <h2>Raw veraPDF JSON</h2>
+        <details>
+            <summary>Show raw JSON</summary>
+            <pre>{{ verapdf_raw_json }}</pre>
+        </details>
+    </div>
+    {% endif %}
     {% endif %}
     
     <div class="actions">

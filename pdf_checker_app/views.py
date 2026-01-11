@@ -13,7 +13,7 @@ from django.urls import reverse
 from pdf_checker_app.forms import PDFUploadForm
 from pdf_checker_app.lib import pdf_helpers, version_helper
 from pdf_checker_app.lib.version_helper import GatherCommitAndBranchData
-from pdf_checker_app.models import PDFDocument
+from pdf_checker_app.models import PDFDocument, VeraPDFResult
 
 log = logging.getLogger(__name__)
 
@@ -132,18 +132,37 @@ def upload_pdf(request):
             else:
                 doc = existing_doc
 
-            ## Save temporary file for processing
-            pdf_path = pdf_helpers.save_temp_file(pdf_file, checksum)
-            log.debug(f'saved temp file to {pdf_path}')
+            doc.processing_status = 'processing'
+            doc.processing_error = None
+            doc.save(update_fields=['processing_status', 'processing_error'])
 
-            ## Process with veraPDF
-            verapdf_raw_json = pdf_helpers.run_verapdf(pdf_path, project_settings.VERAPDF_PATH)
+            try:
+                ## Save temporary file for processing
+                pdf_path = pdf_helpers.save_temp_file(pdf_file, checksum)
+                log.debug(f'saved temp file to {pdf_path}')
 
-            ## Parse output
-            parsed_verapdf_output = pdf_helpers.parse_verapdf_output(verapdf_raw_json)
+                ## Process with veraPDF
+                verapdf_raw_json = pdf_helpers.run_verapdf(pdf_path, project_settings.VERAPDF_PATH)
 
-            ## For now, just mark as pending and redirect
-            messages.success(request, 'PDF uploaded successfully and queued for processing.')
+                ## Parse output
+                parsed_verapdf_output = pdf_helpers.parse_verapdf_output(verapdf_raw_json)
+
+                ## Persist raw JSON
+                pdf_helpers.save_verapdf_result(doc.id, parsed_verapdf_output)
+            except Exception as exc:
+                log.exception('veraPDF processing failed')
+                doc.processing_status = 'failed'
+                doc.processing_error = str(exc)
+                doc.save(update_fields=['processing_status', 'processing_error'])
+                messages.error(request, 'PDF processing failed. Please try again later.')
+                return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
+
+            doc.processing_status = 'completed'
+            doc.processing_error = None
+            doc.save(update_fields=['processing_status', 'processing_error'])
+
+            ## Redirect to the report after processing
+            messages.success(request, 'PDF uploaded successfully and processed.')
             return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
     else:
         form = PDFUploadForm()
@@ -157,6 +176,15 @@ def view_report(request, pk: uuid.UUID):
     """
     log.debug(f'starting view_report() for pk={pk}')
     doc = get_object_or_404(PDFDocument, pk=pk)
+    verapdf_raw_json = None
+    if doc.processing_status == 'completed':
+        verapdf_raw_json_data = (
+            VeraPDFResult.objects.filter(pdf_document=doc)
+            .values_list('raw_json', flat=True)
+            .first()
+        )
+        if verapdf_raw_json_data is not None:
+            verapdf_raw_json = json.dumps(verapdf_raw_json_data, indent=2)
 
     ## TODO: Implement full report display logic
     ## For now, just show basic document info and status
@@ -166,5 +194,6 @@ def view_report(request, pk: uuid.UUID):
         'pdf_checker_app/report.html',
         {
             'document': doc,
+            'verapdf_raw_json': verapdf_raw_json,
         },
     )
