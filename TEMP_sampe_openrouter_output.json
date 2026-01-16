@@ -1,0 +1,42 @@
+{
+    "id": "gen-1768484340-2FmCkSY5LWYaF2gugq0T",
+    "provider": "ModelRun",
+    "model": "google/gemma-3-27b-it:free",
+    "object": "chat.completion",
+    "created": 1768484340,
+    "choices": [
+        {
+            "logprobs": null,
+            "finish_reason": "stop",
+            "native_finish_reason": "stop",
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "\nHere are some suggestions to improve the accessibility of your PDF.\n\n1. **Add a Document Language:** Your PDF doesn\u2019t clearly specify the language it\u2019s written in (like English, Spanish, or French). This is important for screen readers to pronounce words correctly. In Acrobat, you can usually find this setting under \u201cFile\u201d -> \u201cProperties\u201d -> \u201cLanguage\u201d. Select the appropriate language from the dropdown menu.\n\n2. **Create a Proper Document Structure (Tags):** The PDF lacks a well-defined reading order and logical structure. Think of this like headings and paragraphs in a word processor. Screen readers use this structure to help people navigate the document. Acrobat has an \u201cAccessibility\u201d tool that can help you add tags, or automatically detect the reading order. You may need to review and correct the automatically generated tags to ensure they are accurate.\n\n3. **Mark Content as Artifact or Real Content:** The accessibility checker found a lot of content that isn\u2019t clearly identified as either meaningful text/images (real content) or purely decorative elements (artifact content). Screen readers will attempt to read *everything* in the document, including things that shouldn\u2019t be read aloud. In Acrobat, when you are in the tagging mode, you can set content to be marked as an artifact. This tells screen readers to ignore it. \n\nThese three steps will likely address the majority of the accessibility issues. There may be other, less critical things to improve, but focusing on these will make the biggest difference for people using assistive technology.\n\n\n\n",
+                "refusal": null,
+                "reasoning": null
+            }
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 1353698,
+        "completion_tokens": 413,
+        "total_tokens": 1354111,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "audio_tokens": 0,
+            "video_tokens": 0
+        },
+        "cost_details": {
+            "upstream_inference_cost": null,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+            "reasoning_tokens": 0,
+            "image_tokens": 0
+        }
+    }
+}
