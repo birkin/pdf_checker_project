@@ -1,0 +1,45 @@
+{% comment %}
+Status fragment for htmx polling.
+Stops polling when is_terminal is True (completed or failed).
+Triggers one-time load of verapdf_fragment when completed.
+{% endcomment %}
+
+{% if document.processing_status == 'pending' %}
+<div id="status-container" 
+     class="status-pending"
+     hx-get="{% url 'status_fragment_url' pk=document.pk %}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+    <p>This PDF is queued for processing. Please wait...</p>
+</div>
+
+{% elif document.processing_status == 'processing' %}
+<div id="status-container" 
+     class="status-processing"
+     hx-get="{% url 'status_fragment_url' pk=document.pk %}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+    <p>This PDF is currently being processed. Please wait...</p>
+</div>
+
+{% elif document.processing_status == 'failed' %}
+<div id="status-container" class="status-failed">
+    <p><strong>Processing failed:</strong> Try again; if this continues, use the feedback link above.</p>
+</div>
+<!-- Trigger one-time load of verapdf section (will show empty/error state) -->
+<div hx-get="{% url 'verapdf_fragment_url' pk=document.pk %}"
+     hx-trigger="load"
+     hx-target="#verapdf-container"
+     hx-swap="outerHTML"></div>
+
+{% elif document.processing_status == 'completed' %}
+<div id="status-container" class="status-completed">
+    <p>Processing complete.</p>
+</div>
+<!-- Trigger one-time load of verapdf section -->
+<div hx-get="{% url 'verapdf_fragment_url' pk=document.pk %}"
+     hx-trigger="load"
+     hx-target="#verapdf-container"
+     hx-swap="outerHTML"></div>
+
+{% endif %}

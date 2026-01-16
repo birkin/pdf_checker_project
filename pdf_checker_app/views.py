@@ -13,9 +13,89 @@ from django.urls import reverse
 from pdf_checker_app.forms import PDFUploadForm
 from pdf_checker_app.lib import pdf_helpers, version_helper
 from pdf_checker_app.lib.version_helper import GatherCommitAndBranchData
-from pdf_checker_app.models import PDFDocument, VeraPDFResult
+from pdf_checker_app.models import OpenRouterSummary, PDFDocument, VeraPDFResult
 
 log = logging.getLogger(__name__)
+
+# -------------------------------------------------------------------
+# htmx fragment endpoints for polling
+# -------------------------------------------------------------------
+
+
+def status_fragment(request, pk: uuid.UUID):
+    """
+    Returns a small HTML fragment for the status area.
+    Used by htmx polling on the report page.
+    Stops polling when processing is complete or failed.
+    """
+    log.debug(f'starting status_fragment() for pk={pk}')
+    doc = get_object_or_404(PDFDocument, pk=pk)
+
+    ## Determine if we should continue polling
+    is_terminal = doc.processing_status in ('completed', 'failed')
+
+    response = render(
+        request,
+        'pdf_checker_app/fragments/status_fragment.html',
+        {
+            'document': doc,
+            'is_terminal': is_terminal,
+        },
+    )
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
+def verapdf_fragment(request, pk: uuid.UUID):
+    """
+    Returns an HTML fragment for the veraPDF results section.
+    Called once when status indicates veraPDF is ready.
+    """
+    log.debug(f'starting verapdf_fragment() for pk={pk}')
+    doc = get_object_or_404(PDFDocument, pk=pk)
+
+    verapdf_raw_json: str | None = None
+    if doc.processing_status == 'completed':
+        verapdf_raw_json_data = VeraPDFResult.objects.filter(pdf_document=doc).values_list('raw_json', flat=True).first()
+        if verapdf_raw_json_data is not None:
+            verapdf_raw_json = json.dumps(verapdf_raw_json_data, indent=2)
+
+    response = render(
+        request,
+        'pdf_checker_app/fragments/verapdf_fragment.html',
+        {
+            'document': doc,
+            'verapdf_raw_json': verapdf_raw_json,
+        },
+    )
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
+def summary_fragment(request, pk: uuid.UUID):
+    """
+    Returns an HTML fragment for the OpenRouter summary section.
+    Can be polled or loaded once depending on UX preference.
+    """
+    log.debug(f'starting summary_fragment() for pk={pk}')
+    doc = get_object_or_404(PDFDocument, pk=pk)
+
+    summary: OpenRouterSummary | None = None
+    try:
+        summary = doc.openrouter_summary
+    except OpenRouterSummary.DoesNotExist:
+        pass
+
+    response = render(
+        request,
+        'pdf_checker_app/fragments/summary_fragment.html',
+        {
+            'document': doc,
+            'summary': summary,
+        },
+    )
+    response['Cache-Control'] = 'no-store'
+    return response
 
 
 # -------------------------------------------------------------------
@@ -96,7 +176,8 @@ def root(request):
 
 def upload_pdf(request):
     """
-    Handles PDF upload and initiates processing.
+    Handles PDF upload. Saves file and marks document as 'pending' for background processing.
+    Does NOT run veraPDF synchronously - that is handled by a cron-driven script.
     """
     log.debug('starting upload_pdf()')
     if request.method == 'POST':
@@ -117,8 +198,19 @@ def upload_pdf(request):
                 messages.info(request, 'This PDF has already been processed.')
                 return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': existing_doc.pk}))
 
-            ## Create new document record with Shibboleth user info
-            if not existing_doc:
+            ## For pending/processing docs, redirect to report (let polling handle it)
+            if existing_doc and existing_doc.processing_status in ('pending', 'processing'):
+                messages.info(request, 'This PDF is already being processed.')
+                return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': existing_doc.pk}))
+
+            ## For failed docs, allow re-upload by resetting to pending
+            if existing_doc and existing_doc.processing_status == 'failed':
+                doc = existing_doc
+                doc.processing_status = 'pending'
+                doc.processing_error = None
+                doc.save(update_fields=['processing_status', 'processing_error'])
+            else:
+                ## Create new document record with Shibboleth user info
                 doc = PDFDocument.objects.create(
                     original_filename=pdf_file.name,
                     file_checksum=checksum,
@@ -129,40 +221,21 @@ def upload_pdf(request):
                     user_groups=user_info['groups'],
                     processing_status='pending',
                 )
-            else:
-                doc = existing_doc
 
-            doc.processing_status = 'processing'
-            doc.processing_error = None
-            doc.save(update_fields=['processing_status', 'processing_error'])
-
+            ## Save file for background processing
             try:
-                ## Save temporary file for processing
                 pdf_path = pdf_helpers.save_pdf_file(pdf_file, checksum)
-                log.debug(f'saved temp file to {pdf_path}')
-
-                ## Process with veraPDF
-                verapdf_raw_json = pdf_helpers.run_verapdf(pdf_path, project_settings.VERAPDF_PATH)
-
-                ## Parse output
-                parsed_verapdf_output = pdf_helpers.parse_verapdf_output(verapdf_raw_json)
-
-                ## Persist raw JSON
-                pdf_helpers.save_verapdf_result(doc.id, parsed_verapdf_output)
+                log.debug(f'saved PDF file to {pdf_path}')
             except Exception as exc:
-                log.exception('veraPDF processing failed')
+                log.exception('Failed to save PDF file')
                 doc.processing_status = 'failed'
-                doc.processing_error = str(exc)
+                doc.processing_error = f'Failed to save file: {exc}'
                 doc.save(update_fields=['processing_status', 'processing_error'])
-                messages.error(request, 'PDF processing failed. Please try again later.')
+                messages.error(request, 'Failed to save PDF file. Please try again.')
                 return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
 
-            doc.processing_status = 'completed'
-            doc.processing_error = None
-            doc.save(update_fields=['processing_status', 'processing_error'])
-
-            ## Redirect to the report after processing
-            messages.success(request, 'PDF uploaded successfully and processed.')
+            ## Redirect to report page - polling will show progress
+            messages.success(request, 'PDF uploaded successfully. Processing will begin shortly.')
             return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
     else:
         form = PDFUploadForm()
@@ -176,14 +249,18 @@ def view_report(request, pk: uuid.UUID):
     """
     log.debug(f'starting view_report() for pk={pk}')
     doc = get_object_or_404(PDFDocument, pk=pk)
-    verapdf_raw_json = None
+    verapdf_raw_json: str | None = None
     if doc.processing_status == 'completed':
         verapdf_raw_json_data = VeraPDFResult.objects.filter(pdf_document=doc).values_list('raw_json', flat=True).first()
         if verapdf_raw_json_data is not None:
             verapdf_raw_json = json.dumps(verapdf_raw_json_data, indent=2)
 
-    ## TODO: Implement full report display logic
-    ## For now, just show basic document info and status
+    ## Get OpenRouter summary if it exists
+    summary: OpenRouterSummary | None = None
+    try:
+        summary = doc.openrouter_summary
+    except OpenRouterSummary.DoesNotExist:
+        pass
 
     return render(
         request,
@@ -191,5 +268,6 @@ def view_report(request, pk: uuid.UUID):
         {
             'document': doc,
             'verapdf_raw_json': verapdf_raw_json,
+            'summary': summary,
         },
     )
