@@ -157,8 +157,8 @@ def main() -> None:
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=log_level,
-        format='[%(asctime)s] %(levelname)s [%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
+        format='[%(asctime)s] %(levelname)s [%(module)s-%(funcName)s()::%(lineno)d] %(message)s',
+        datefmt='%d/%b/%Y %H:%M:%S',
     )
 
     log.info('Starting veraPDF job processor')
