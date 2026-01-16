@@ -38,6 +38,7 @@ import django  # noqa: E402
 django.setup()
 
 import httpx  # noqa: E402
+from django.utils import timezone as django_timezone  # noqa: E402
 
 from pdf_checker_app.models import OpenRouterSummary, PDFDocument, VeraPDFResult  # noqa: E402
 
@@ -193,7 +194,8 @@ def parse_openrouter_response(response_json: dict) -> dict:
     ## Extract created timestamp
     created = response_json.get('created')
     if created:
-        result['openrouter_created_at'] = datetime.fromtimestamp(created, tz=timezone.utc)
+        utc_dt = datetime.fromtimestamp(created, tz=timezone.utc)
+        result['openrouter_created_at'] = django_timezone.make_naive(utc_dt)
 
     return result
 
@@ -208,14 +210,18 @@ def process_single_summary(doc: PDFDocument, api_key: str) -> bool:
     ## Get or create the summary record
     summary: OpenRouterSummary
     created: bool
+    utc_now = datetime.now(tz=timezone.utc)
+    naive_now = django_timezone.make_naive(utc_now)
     summary, created = OpenRouterSummary.objects.get_or_create(
         pdf_document=doc,
-        defaults={'status': 'processing', 'requested_at': datetime.now(tz=timezone.utc)},
+        defaults={'status': 'processing', 'requested_at': naive_now},
     )
 
     if not created:
+        utc_now = datetime.now(tz=timezone.utc)
+        naive_now = django_timezone.make_naive(utc_now)
         summary.status = 'processing'
-        summary.requested_at = datetime.now(tz=timezone.utc)
+        summary.requested_at = naive_now
         summary.error = None
         summary.save(update_fields=['status', 'requested_at', 'error'])
 
@@ -244,8 +250,10 @@ def process_single_summary(doc: PDFDocument, api_key: str) -> bool:
         summary.prompt_tokens = parsed['prompt_tokens']
         summary.completion_tokens = parsed['completion_tokens']
         summary.total_tokens = parsed['total_tokens']
+        utc_now = datetime.now(tz=timezone.utc)
+        naive_now = django_timezone.make_naive(utc_now)
         summary.status = 'completed'
-        summary.completed_at = datetime.now(tz=timezone.utc)
+        summary.completed_at = naive_now
         summary.error = None
         summary.save()
 
