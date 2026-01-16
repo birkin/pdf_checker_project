@@ -13,7 +13,7 @@ Update the webapp so that:
 
 - No Celery/RQ/queue system for now.
 - Cron will trigger one or more scripts within the repo to do background work.
-- **Do not change the database schema at all.**
+- DB schema changes are allowed to support persisting OpenRouter results (raw response + parsed summary) linked to `PDFDocument`.
 
 ## Current behavior (baseline)
 
@@ -50,14 +50,14 @@ This makes the upload request slow (veraPDF is seconds; future OpenRouter is 10�
    - Cron runs a script that:
      - finds documents whose veraPDF processing is complete
      - checks whether a summary exists
-     - if missing, calls OpenRouter and writes the summary somewhere **not in the DB**
+     - if missing, calls OpenRouter and persists the result to the database (raw response + parsed summary)
 
 ### Report page becomes a “live” UI via polling
 
 - The report page continues to render server-side as it does today.
 - It also includes a small JS poller that periodically fetches JSON endpoints to update the UI without reload.
 
-## Data sources for polling (no DB changes)
+## Data sources for polling
 
 ### veraPDF status + results
 
@@ -65,28 +65,43 @@ This makes the upload request slow (veraPDF is seconds; future OpenRouter is 10�
   - `PDFDocument.processing_status` and `processing_error`
   - `VeraPDFResult` (OneToOne) for the raw JSON
 
-### Summary status + results (no DB schema changes)
+### OpenRouter summary status + results (DB-backed)
 
-Because we cannot add a `summary` column/table right now:
+Persist OpenRouter results to the database so the report page can poll reliably and you can retain:
 
-- Store summary output as a **sidecar file** on disk, keyed by the document.
+- the raw OpenRouter response JSON (example: `TEMP_sampe_openrouter_output.json`)
+- the extracted assistant summary text/markdown (from `choices[0].message.content`)
+- status/error/timestamps and basic usage metrics
 
-Recommendation:
+#### Proposed model/table
 
-- Put summary artifacts under a deterministic directory, e.g.:
-  - `project_settings.PDF_UPLOAD_PATH / "summaries" / f"{doc.id}.json"`
+Add a new Django model linked to the main PDF table:
 
-And store a JSON payload like:
+- `OpenRouterSummary` (name can change)
+  - relationship: `pdf_document = models.OneToOneField(PDFDocument, ...)`
+    - (See open-questions below if you want multiple attempts/history.)
+  - persistence fields:
+    - `raw_response_json = models.JSONField()`
+    - `summary_text = models.TextField(blank=True)`
+  - identity/metadata fields (based on OpenRouter response shape):
+    - `openrouter_response_id = models.CharField(max_length=128, blank=True)` (maps to top-level `id`)
+    - `provider = models.CharField(max_length=64, blank=True)`
+    - `model = models.CharField(max_length=128, blank=True)`
+    - `finish_reason = models.CharField(max_length=32, blank=True)`
+  - status/error fields:
+    - `status = models.CharField(choices=[pending, processing, completed, failed], default=pending)`
+    - `error = models.TextField(blank=True, null=True)`
+  - datetime fields (minimum recommended):
+    - `requested_at = models.DateTimeField(null=True, blank=True)`
+    - `completed_at = models.DateTimeField(null=True, blank=True)`
+    - (Optionally) `openrouter_created_at = models.DateTimeField(null=True, blank=True)` derived from top-level `created` (epoch)
+  - usage/cost fields (optional but useful; from `usage` object):
+    - `prompt_tokens = models.IntegerField(null=True, blank=True)`
+    - `completion_tokens = models.IntegerField(null=True, blank=True)`
+    - `total_tokens = models.IntegerField(null=True, blank=True)`
+    - `cost = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)`
 
-- `{"status": "pending"|"completed"|"failed", "summary_text": "...", "error": "...", "created_at": "...", "model": "..."}`
-
-This gives:
-
-- **Polling signal**: file exists and `status` != pending.
-- **No DB changes**.
-- **Idempotency**: if the file exists with `completed`, the cron job skips.
-
-(Alternative: store a `.txt` file and treat presence as completion; JSON is more extensible.)
+This keeps veraPDF’s lifecycle in `PDFDocument.processing_status` while allowing the summary generation lifecycle to be tracked independently.
 
 ## Web endpoints to add (polling)
 
@@ -97,7 +112,7 @@ Suggested endpoints:
 - `GET /pdf/report/<uuid:pk>/status.json`
   - returns document status and which artifacts exist
   - example response:
-    - `{"processing_status": "pending"|"processing"|"completed"|"failed", "processing_error": null|"...", "has_verapdf": true|false, "has_summary": true|false}`
+    - `{"processing_status": "pending"|"processing"|"completed"|"failed", "processing_error": null|"...", "has_verapdf": true|false, "summary_status": "missing"|"pending"|"processing"|"completed"|"failed", "summary_error": null|"..."}`
 
 - `GET /pdf/report/<uuid:pk>/verapdf.json`
   - returns veraPDF raw JSON if available
@@ -182,14 +197,20 @@ Responsibilities:
 - Find completed docs:
   - `PDFDocument.objects.filter(processing_status='completed')`
 - Only act on docs that also have a `VeraPDFResult`.
-- Determine if summary already exists by checking for the sidecar file.
-- If missing:
+- Determine if a summary already exists by checking for an `OpenRouterSummary` row.
+- If missing (or if reprocessing is allowed):
+  - create/update `OpenRouterSummary` with `status='processing'` and `requested_at=now()`
   - call OpenRouter
-  - write summary JSON file (with `status`, `summary_text`, `error`, `model`, timestamps)
+  - persist:
+    - `raw_response_json` (full JSON)
+    - `summary_text` extracted from `choices[0].message.content`
+    - metadata fields like `openrouter_response_id`, `model`, `provider`, `finish_reason`
+    - usage fields like token counts/cost if present
+  - set `status='completed'` and `completed_at=now()`
 
 Failure handling:
 
-- On OpenRouter failure, write `status='failed'` + error to the sidecar file so polling can show a stable error message.
+- On OpenRouter failure, set `status='failed'` + `error` on `OpenRouterSummary` so polling can show a stable error message.
 
 ## Upload flow changes (web request path)
 
@@ -218,11 +239,12 @@ Add/adjust Django tests:
   - `GET /status.json` returns expected JSON for each status
   - `GET /verapdf.json` returns pending payload when no `VeraPDFResult` exists
   - `GET /verapdf.json` returns JSON when it exists
-  - `GET /summary.json` returns pending payload when sidecar file missing
+  - `GET /summary.json` returns pending payload when no `OpenRouterSummary` exists
+  - `GET /summary.json` returns summary payload when `OpenRouterSummary.status='completed'`
 
 For cron scripts:
 
-- Unit-ish tests (if feasible) for “job selection” logic and for the sidecar-file conventions.
+- Unit-ish tests (if feasible) for “job selection” logic and for `OpenRouterSummary` idempotency rules.
 - (Optional) smoke test that a doc transitions `pending -> completed` when helper functions are stubbed.
 
 ## Operational notes
@@ -246,15 +268,17 @@ For cron scripts:
 2. Change upload to mark `pending` and return immediately.
 3. Add cron script to process veraPDF jobs and update DB.
 4. Extend polling to fetch and render veraPDF JSON when ready.
-5. Add summary sidecar-file convention + `/summary.json` endpoint returning pending.
-6. Implement OpenRouter call in cron summary script (future).
+5. Add `OpenRouterSummary` model + `/summary.json` endpoint returning pending.
+6. Implement OpenRouter call + parsing + DB persistence in cron summary script (future).
 
 ## Open questions / decisions to make (can be decided during implementation)
 
 - Polling response conventions:
   - Use `200` always with `{ready: false}` vs using `202 Accepted`.
-- Summary storage:
-  - Sidecar JSON file location under `PDF_UPLOAD_PATH` vs a separate `RESULTS_PATH`.
+- Summary table cardinality:
+  - `OneToOneField` (only the latest summary) vs `ForeignKey` (history of attempts/models/prompts).
+- What to persist from `usage`:
+  - store token counts + cost now vs defer until you care about reporting.
 - Security / access:
   - Anyone with the UUID can access the report endpoints; is that acceptable for your environment?
 - veraPDF JSON size:
