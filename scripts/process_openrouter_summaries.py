@@ -287,8 +287,8 @@ def main() -> None:
     parser.add_argument(
         '--batch-size',
         type=int,
-        default=3,
-        help='Maximum number of summaries to generate in one run (default: 3)',
+        default=1,
+        help='Maximum number of summaries to generate in one run (default: 1)',
     )
     parser.add_argument(
         '--dry-run',
