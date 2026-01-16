@@ -19,12 +19,18 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import find_dotenv, load_dotenv
+
 ## Django setup - must happen before importing Django models
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 ## Add project root to path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
+
+## Load environment variables
+dotenv_path = project_root.parent / '.env'
+load_dotenv(find_dotenv(str(dotenv_path), raise_error_if_not_found=True), override=True)
 
 import django  # noqa: E402
 
@@ -38,15 +44,16 @@ log = logging.getLogger(__name__)
 
 ## OpenRouter configuration
 OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-OPENROUTER_MODEL = 'openai/gpt-4o-mini'  # Cost-effective model for summaries
+OPENROUTER_API_KEY = os.environ['OPENROUTER_API_KEY']
+OPENROUTER_MODEL = os.environ['OPENROUTER_MODEL']
 OPENROUTER_TIMEOUT = 60.0  # seconds
 
 
-def get_api_key() -> str | None:
+def get_api_key() -> str:
     """
     Retrieves the OpenRouter API key from environment.
     """
-    return os.environ.get('OPENROUTER_API_KEY')
+    return OPENROUTER_API_KEY
 
 
 def find_pending_summaries(batch_size: int) -> list[PDFDocument]:
