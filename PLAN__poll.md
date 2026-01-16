@@ -57,7 +57,8 @@ This makes the upload request slow (veraPDF is seconds; future OpenRouter is 10�
 ### Report page becomes a “live” UI via polling
 
 - The report page continues to render server-side as it does today.
-- It also includes a small JS poller that periodically fetches JSON endpoints to update the UI without reload.
+- It also includes `htmx` attributes that periodically request small **HTML fragment** endpoints to update parts of the page without a full reload.
+- veraPDF raw JSON should be retrieved **once** when it becomes available (no continued polling for the large JSON payload).
 
 ## Data sources for polling
 
@@ -107,54 +108,70 @@ This keeps veraPDF’s lifecycle in `PDFDocument.processing_status` while allowi
 
 ## Web endpoints to add (polling)
 
-Add lightweight JSON endpoints (Django views) that the report page can poll.
+Add lightweight endpoints (Django views) that the report page can poll using `htmx`.
+These endpoints should primarily return **HTML fragments** that can be swapped into the report page.
 
 Suggested endpoints:
 
-- `GET /pdf/report/<uuid:pk>/status.json`
-  - returns document status and which artifacts exist
-  - example response:
-    - `{"processing_status": "pending"|"processing"|"completed"|"failed", "processing_error": null|"...", "has_verapdf": true|false, "summary_status": "missing"|"pending"|"processing"|"completed"|"failed", "summary_error": null|"..."}`
+- `GET /pdf/report/<uuid:pk>/status.fragment`
+  - returns a small HTML fragment for the “status” area
+  - includes user-facing status text
+  - can optionally include **out-of-band swaps** (via `hx-swap-oob`) to update other parts of the page when results become available
+  - should stop polling by rendering a final status fragment that does **not** include polling attributes once:
+    - veraPDF is complete (or failed)
+    - and (future) OpenRouter summary is complete (or failed)
+
+- `GET /pdf/report/<uuid:pk>/verapdf.fragment`
+  - returns an HTML fragment for the veraPDF section
+  - if results are not ready, returns a “waiting” fragment
+  - if results are ready, returns a fragment that embeds the veraPDF JSON in the page (for example inside a `<pre>` or a `<script type="application/json">` + UI)
+  - this endpoint should be loaded **once** (not polled) when status indicates veraPDF is ready
+
+- `GET /pdf/report/<uuid:pk>/summary.fragment`
+  - returns an HTML fragment for the summary section
+  - can be polled (small response size) or loaded once depending on how you want the UX to behave
+
+Optional “direct access” JSON endpoints (non-polling; user-facing):
 
 - `GET /pdf/report/<uuid:pk>/verapdf.json`
-  - returns veraPDF raw JSON if available
-  - if not available yet, return `202 Accepted` + `{ "ready": false }` (or `200` with `ready: false`; choose one convention and keep consistent)
-
-- `GET /pdf/report/<uuid:pk>/summary.json`
-  - returns summary data if available
-  - if not available, same pending convention as above
+  - returns the raw veraPDF JSON if available (for users who want to download/copy the raw data)
+- `GET /pdf/report/<uuid:pk>/summary.json` (future)
+  - returns summary data as JSON if you want programmatic access
 
 Notes:
 
-- Keep responses small where possible; veraPDF raw JSON can be huge.
-  - If you need to keep the first iteration simple, return the raw JSON (it’s already being displayed), but long-term consider a “summary-of-the-json” endpoint that returns counts and top failures.
+- Keep polled responses small where possible; veraPDF raw JSON can be huge.
+  - The polled `status.fragment` response should be tiny.
+  - The large veraPDF JSON should be fetched once (via `verapdf.fragment` or `verapdf.json`) when it becomes available.
 - Set headers to avoid caching issues while polling (eg `Cache-Control: no-store`).
 
 ## Frontend polling behavior (report page)
 
 In `report.html`:
 
-- Add a JS poll loop using `fetch()`.
+- Add `htmx` polling on a small “status” container.
 - Poll cadence:
-  - Start at ~1–2 seconds for the first 10–15 seconds
-  - Then back off to ~5 seconds
-  - Stop polling after:
+  - Start with a simple fixed cadence (ex: every ~2 seconds) to keep implementation low-risk.
+  - Optionally implement server-driven backoff by returning updated polling attributes in the swapped HTML (ex: change `hx-trigger` from `every 2s` to `every 5s`).
+  - Stop polling by returning status HTML that no longer includes polling attributes once:
     - both veraPDF and summary are complete OR
     - status is `failed` OR
-    - a max time limit (ex: 2 minutes) with an on-page message telling the user to refresh later
+    - a max time limit is reached (ex: show an on-page message telling the user to refresh later)
 
 UI states:
 
 - Show a “processing” message while waiting.
-- When `has_verapdf` becomes true:
-  - either inject the JSON into the existing `<pre>` element
-  - or reload just the JSON area
-- When `has_summary` becomes true:
+- When veraPDF becomes available:
+  - trigger a **one-time** load of the veraPDF section (swap in the JSON view)
+- When the summary becomes available:
   - render summary text
 
 Implementation detail:
 
-- To keep the first iteration low-risk, the poller can just call `/status.json` and, once it reports `has_verapdf`, do a second call to `/verapdf.json`.
+- To keep the first iteration low-risk:
+  - poll only `status.fragment` (small)
+  - once status indicates veraPDF is ready, load `verapdf.fragment` exactly once
+  - (future) poll `summary.fragment` or load it once, depending on desired UX
 
 ## Cron-driven scripts (no queue)
 
@@ -266,17 +283,17 @@ For cron scripts:
 
 ## Suggested implementation sequence (low-risk incremental)
 
-1. Add JSON status endpoint + JS polling that only updates the “status” display (no veraPDF JSON fetch yet).
+1. Add `htmx` status fragment endpoint + `htmx` polling that only updates the “status” display (no veraPDF JSON fetch yet).
 2. Change upload to mark `pending` and return immediately.
 3. Add cron script to process veraPDF jobs and update DB.
-4. Extend polling to fetch and render veraPDF JSON when ready.
+4. Extend the `htmx` status fragment to trigger a **one-time** load of the veraPDF section and render the veraPDF JSON.
 5. Add `OpenRouterSummary` model + `/summary.json` endpoint returning pending.
 6. Implement OpenRouter call + parsing + DB persistence in cron summary script (future).
 
 ## Open questions / decisions to make (can be decided during implementation)
 
-- Polling response conventions:
-  - Use `200` always with `{ready: false}` vs using `202 Accepted`.
+- HTMX fragment vs JSON:
+  - Prefer HTML fragments for the polling UI; keep JSON endpoints only for direct access/download when needed.
 - Summary table cardinality:
   - `OneToOneField` (only the latest summary) vs `ForeignKey` (history of attempts/models/prompts).
 - What to persist from `usage`:
