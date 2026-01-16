@@ -1,5 +1,7 @@
 # Polling Architecture Plan (veraPDF + OpenRouter summary)
 
+Review `pdf_checker_project/AGENTS.md` for coding directives.
+
 ## Goal
 
 Update the webapp so that:
