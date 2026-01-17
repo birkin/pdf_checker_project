@@ -314,9 +314,15 @@ def process_single_summary(doc: PDFDocument, api_key: str) -> bool:
         ## Prune checks
         verapdf_json = filter_down_failure_checks(raw_verapdf_json)
 
-        ## Build prompt and call API
+        ## Build prompt
         prompt = build_prompt(verapdf_json)
         log.debug(f'Calling OpenRouter for document {doc.pk}')
+
+        ## Save prompt
+        summary.prompt_text = prompt
+        summary.save(update_fields=['prompt_text'])
+
+        ## Call API
         response_json = call_openrouter(prompt, api_key)
 
         ## Parse response
