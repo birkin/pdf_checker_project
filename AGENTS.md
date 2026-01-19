@@ -10,18 +10,18 @@ If other instruction files exist (Copilot, IDE rules, contributor docs) and conf
 - Primary language: Python
 - Target runtime: Python 3.12
 - Dependency / execution tool: `uv`
-- project root is the directory containing this file.
+- Project-root is the directory containing this file (and `.git/`, and `.gitignore`).
 
 
-## How to run
+## How to run code
 
-- Assumes the root directory is the repository root (with the `.git` directory)
-- Run a script (example): `uv run ./path_to_script.py --help`
-- Run tests (required for changes that affect behavior): 
+- Assume user is in the project-root directory.
+- Do not use `python` to run scripts.
+- Run a script via: `uv run ./path_to_script.py --help`
+- Run tests via:
     - `uv run ./run_tests.py`
         - Note that `run_tests.py` has usage instructions about how to run more granular tests.
-
-If a command fails due to missing context, inspect the repository for existing documented commands (README "Usage") and prefer those.
+- Run django management scripts via: `uv run ./manage.py THE-COMMAND`
 
 
 ## Coding directives (Python)
@@ -31,7 +31,7 @@ If a command fails due to missing context, inspect the repository for existing d
 - Use Python 3.12 type hints everywhere (functions and important variables).
 - Prefer builtin generics (e.g., `list[str]`, `dict[str, int]`) over `typing.List` / `typing.Dict`.
 - Prefer PEP 604 unions (e.g., `str | None`) over `Optional[str]`.
-- Avoid `typing` imports unless strictly necessary.
+- Avoid `typing` and `annotations` imports unless strictly necessary.
 
 ### Script structure
 
@@ -69,6 +69,33 @@ If a command fails due to missing context, inspect the repository for existing d
 ### Additonal coding directives
 
 - inspect the `/ruff.toml` for additional coding directives, such as `max-line-length` and `quote-style`.
+
+
+## Django architecture conventions
+
+### View-layer responsibilities
+
+- `project/app/views.py` should contain **only** view functions that directly handle URL endpoints.
+- Every view function in `project/app/views.py` should correspond to an entry in `pdf_checker_project/config/urls.py`.
+- Views should act as **manager/orchestrator** functions:
+  - Parse request input (query params, POST body, files)
+  - Perform minimal validation and shaping of inputs
+  - Delegate substantive work to modules under `project/app/lib/`
+  - Convert returned results into the appropriate `HttpResponse` (HTML, JSON, redirects)
+
+### Business logic placement
+
+- Put domain logic, integrations, and reusable operations in `project/app/lib/` (not in `views.py`).
+- If multiple endpoints share logic, move that shared logic into `project/app/lib/` and keep each view thin.
+- Prefer pure, testable functions in `project/app/lib/` that accept plain Python values (not Django request objects)
+  unless passing the request is necessary for a narrow, well-justified reason.
+
+### Imports and dependencies
+
+- `views.py` should primarily import:
+  - Django primitives (`HttpRequest`, `HttpResponse`, `render`, `redirect`, etc.)
+  - The minimal set of functions/classes from `project/app/lib/` needed for each endpoint
+- Avoid creating a secondary abstraction layer inside `views.py` (no view-helper utilities); place helpers in `project/app/lib/`.
 
 
 ## Tests
