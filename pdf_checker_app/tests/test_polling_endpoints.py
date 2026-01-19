@@ -140,7 +140,7 @@ class VerapdfFragmentTest(TestCase):
         url = reverse('verapdf_fragment_url', kwargs={'pk': self.test_uuid})
         response = self.client.get(url)
         self.assertEqual(200, response.status_code)
-        self.assertContains(response, 'Raw veraPDF JSON')
+        self.assertContains(response, 'veraPDF Response')
         self.assertContains(response, 'test')
 
     def test_verapdf_fragment_pending_status(self):
