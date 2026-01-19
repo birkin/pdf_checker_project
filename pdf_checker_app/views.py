@@ -181,7 +181,7 @@ def upload_pdf(request):
     Attempts to run veraPDF and OpenRouter synchronously with timeouts.
     Falls back to polling + cron if timeouts are hit.
     """
-    log.debug('starting upload_pdf()')
+    log.debug('\n\nstarting upload_pdf()\n\n')
     if request.method == 'POST':
         form = PDFUploadForm(request.POST, request.FILES)
         if form.is_valid():
