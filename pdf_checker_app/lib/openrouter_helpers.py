@@ -123,6 +123,9 @@ def call_openrouter(prompt: str, api_key: str, model: str, timeout_seconds: floa
     Raises:
         httpx.TimeoutException: If the request exceeds timeout_seconds.
         httpx.HTTPStatusError: If the API returns an error status.
+
+    Note: Only one of our servers requires a non-default certificate to be specified,
+          so the SYSTEM_CA_BUNDLE environment variable is implemented optionally.
     """
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -131,19 +134,21 @@ def call_openrouter(prompt: str, api_key: str, model: str, timeout_seconds: floa
         'X-Title': 'PDF Accessibility Checker',
     }
 
-    payload = {
-        'model': model,
-        'messages': [
-            {'role': 'user', 'content': prompt},
-        ],
-    }
+    payload = {'model': model, 'messages': [{'role': 'user', 'content': prompt}]}
 
-    with httpx.Client(timeout=timeout_seconds) as client:
+    client_kwargs = {'timeout': timeout_seconds}
+    SYSTEM_CA_BUNDLE = os.environ.get('SYSTEM_CA_BUNDLE')  # path to a non-default certificate-authority bundle file
+    if SYSTEM_CA_BUNDLE:
+        client_kwargs['verify'] = SYSTEM_CA_BUNDLE
+
+    with httpx.Client(**client_kwargs) as client:
         response = client.post(OPENROUTER_API_URL, headers=headers, json=payload)
         response.raise_for_status()
         jsn_response = response.json()
         log.debug(f'jsn_response, ``{jsn_response}``')
         return jsn_response
+
+    ## end def call_openrouter()
 
 
 def parse_openrouter_response(response_json: dict) -> dict:
@@ -183,6 +188,8 @@ def parse_openrouter_response(response_json: dict) -> dict:
         result['openrouter_created_at'] = django_timezone.make_naive(utc_dt)
 
     return result
+
+    ## end def parse_openrouter_response()
 
 
 def persist_openrouter_summary(summary: OpenRouterSummary, response_json: dict, parsed: dict) -> None:

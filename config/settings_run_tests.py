@@ -207,6 +207,30 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 # TEST_RUNNER = 'test_runner.JSONTestRunner'
 
 
-## django APP settings ----------------------------------------------
+## app-level settings -----------------------------------------------
 
-# None!
+## veraPDF Configuration
+# VERAPDF_PATH = os.environ['VERAPDF_PATH']
+# VERAPDF_PROFILE = os.environ['VERAPDF_PROFILE']  # for now using `PDFUA_1_MACHINE`
+
+VERAPDF_PATH = '/foo'
+VERAPDF_PROFILE = 'bar'
+
+## File Upload Settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+
+## Temp file storage
+# PDF_UPLOAD_PATH = os.environ['PDF_UPLOAD_PATH']
+PDF_UPLOAD_PATH = '/baz'
+
+## Synchronous processing timeouts (web requests)
+VERAPDF_SYNC_TIMEOUT_SECONDS: float = 30.0
+OPENROUTER_SYNC_TIMEOUT_SECONDS: float = 30.0
+
+## Cron job timeouts (background processing - more patient)
+VERAPDF_CRON_TIMEOUT_SECONDS: float = 60.0
+OPENROUTER_CRON_TIMEOUT_SECONDS: float = 60.0
+
+## Stuck processing recovery threshold (10 minutes)
+RECOVER_STUCK_PROCESSING_AFTER_SECONDS: int = 600
