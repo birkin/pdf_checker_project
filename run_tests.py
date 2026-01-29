@@ -30,7 +30,7 @@ def main() -> None:
     ## set settings as early as possible --------------------------------
     is_running_on_github: bool = os.environ.get('GITHUB_ACTIONS', '').lower() == 'true'
     if is_running_on_github:
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings_run_tests'
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings_ci_tests'
     else:
         os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 

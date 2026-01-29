@@ -85,5 +85,5 @@ jobs:
 #   - Run tests
 #     - Runs the Django test suite via './run_tests.py' using uv:
 #       'uv run ./run_tests.py'. This repository's run_tests.py sets
-#       DJANGO_SETTINGS_MODULE=config.settings.unit_tests.
+#       DJANGO_SETTINGS_MODULE=config.settings_ci_tests.
 # =============================================================================
