@@ -61,7 +61,10 @@ class SyncVeraPDFProcessingTest(TestCase):
         """
         Checks that veraPDF timeout sets status to 'pending' for cron pickup.
         """
-        with patch('pdf_checker_app.views.pdf_helpers.run_verapdf', side_effect=VeraPDFTimeoutError('timeout')):
+        with patch(
+            'pdf_checker_app.lib.sync_processing_helpers.pdf_helpers.run_verapdf',
+            side_effect=VeraPDFTimeoutError('timeout'),
+        ):
             result = attempt_verapdf_sync(self.doc, self.pdf_path)
 
         self.assertFalse(result)
