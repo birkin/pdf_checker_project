@@ -121,7 +121,7 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/tmp/'
+STATIC_ROOT = '/tmp/static/'
 
 # Email
 SERVER_EMAIL = 'example@domain.edu'
@@ -129,8 +129,8 @@ EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
 
 ## user uploaded files ----------------------------------------------
-MEDIA_ROOT = '/tmp/'
-BDR_API_FILE_PATH_ROOT = '/tmp/'
+MEDIA_ROOT = '/tmp/media/'
+BDR_API_FILE_PATH_ROOT = '/tmp/bdr_api/'
 """
 The two settings below prevent django from auto-running chmod on uploaded files
     (which can cause permission issues when using a shared volume)
