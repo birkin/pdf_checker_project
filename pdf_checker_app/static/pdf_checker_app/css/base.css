@@ -33,7 +33,7 @@ body {
     background: white;
     border-radius: 8px;
     padding: 2rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
 }
 
@@ -199,7 +199,7 @@ dd {
 .status-processing,
 .status-failed,
 .status-completed {
-    padding: 1rem;
+    padding: 0.66rem 1rem;
     border-radius: 6px;
     margin: 1.5rem 0;
 }
@@ -226,6 +226,15 @@ dd {
     background: #d1fae5;
     color: #065f46;
     border: 1px solid #6ee7b7;
+}
+
+.assessment-accessible {
+    color: #111827;
+}
+
+.assessment-not-accessible {
+    color: #7f1d1d;
+    font-weight: 600;
 }
 
 .actions {

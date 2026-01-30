@@ -143,6 +143,64 @@ def parse_verapdf_output(raw_output: str) -> dict[str, object]:
     return parsed_output
 
 
+def get_verapdf_compliant(raw_json: dict[str, object]) -> bool | None:
+    """
+    Extracts the compliance boolean from veraPDF JSON output.
+
+    Called by: get_accessibility_assessment()
+    """
+    report_obj: object | None = raw_json.get('report')
+    report: dict[str, object]
+    if isinstance(report_obj, dict):
+        report = report_obj
+    else:
+        report = raw_json
+
+    jobs_obj: object | None = report.get('jobs')
+    if not isinstance(jobs_obj, list) or not jobs_obj:
+        return None
+
+    jobs: list[object] = jobs_obj
+
+    job0_obj: object = jobs[0]
+    if not isinstance(job0_obj, dict):
+        return None
+
+    job0: dict[str, object] = job0_obj
+
+    validation_result_obj: object | None = job0.get('validationResult')
+    if not isinstance(validation_result_obj, list) or not validation_result_obj:
+        return None
+
+    validation_result: list[object] = validation_result_obj
+
+    validation_result0_obj: object = validation_result[0]
+    if not isinstance(validation_result0_obj, dict):
+        return None
+
+    validation_result0: dict[str, object] = validation_result0_obj
+
+    compliant: object | None = validation_result0.get('compliant')
+    if isinstance(compliant, bool):
+        return compliant
+
+    return None
+
+
+def get_accessibility_assessment(raw_json: dict[str, object]) -> str | None:
+    """
+    Maps veraPDF compliance to an accessibility assessment label.
+
+    Called by: status_fragment()
+    """
+    compliant: bool | None = get_verapdf_compliant(raw_json)
+    if compliant is None:
+        return None
+    if compliant:
+        return 'accessible'
+    return 'not-accessible'
+
+
 def overwrite_verapdf_job_item_names(raw_json: dict[str, object]) -> None:
     """
     Overwrites the input-file path stored by veraPDF in jobs[].itemDetails.name.

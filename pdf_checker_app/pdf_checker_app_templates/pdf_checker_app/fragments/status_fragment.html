@@ -34,7 +34,14 @@ Triggers one-time load of verapdf_fragment when completed.
 
 {% elif document.processing_status == 'completed' %}
 <div id="status-container" class="status-completed">
-    <p>Processing complete.</p>
+    <p>
+        Processing complete.
+        {% if assessment == 'not-accessible' %}
+            Assessment: <span class="assessment-not-accessible">not-accessible</span>
+        {% elif assessment == 'accessible' %}
+            Assessment: <span class="assessment-accessible">accessible</span>
+        {% endif %}
+    </p>
 </div>
 <!-- Trigger one-time load of verapdf section -->
 <div hx-get="{% url 'verapdf_fragment_url' pk=document.pk %}"

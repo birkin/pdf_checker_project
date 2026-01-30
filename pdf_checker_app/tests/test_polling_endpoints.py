@@ -68,6 +68,70 @@ class StatusFragmentTest(TestCase):
         ## Should trigger verapdf fragment load
         self.assertContains(response, 'verapdf.fragment')
 
+    def test_status_fragment_completed_accessible(self):
+        """
+        Checks that status fragment renders accessible assessment when compliant is True.
+        """
+        self.document.processing_status = 'completed'
+        self.document.save()
+        VeraPDFResult.objects.create(
+            pdf_document=self.document,
+            raw_json={
+                'report': {
+                    'jobs': [
+                        {
+                            'validationResult': [
+                                {
+                                    'compliant': True,
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+            is_accessible=True,
+            validation_profile='PDF/UA-1',
+            verapdf_version='1.0',
+        )
+        url = reverse('status_fragment_url', kwargs={'pk': self.test_uuid})
+        response = self.client.get(url)
+        self.assertEqual(200, response.status_code)
+        self.assertContains(response, 'Assessment:')
+        self.assertContains(response, 'assessment-accessible')
+        self.assertContains(response, 'accessible')
+
+    def test_status_fragment_completed_not_accessible(self):
+        """
+        Checks that status fragment renders not-accessible assessment when compliant is False.
+        """
+        self.document.processing_status = 'completed'
+        self.document.save()
+        VeraPDFResult.objects.create(
+            pdf_document=self.document,
+            raw_json={
+                'report': {
+                    'jobs': [
+                        {
+                            'validationResult': [
+                                {
+                                    'compliant': False,
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+            is_accessible=False,
+            validation_profile='PDF/UA-1',
+            verapdf_version='1.0',
+        )
+        url = reverse('status_fragment_url', kwargs={'pk': self.test_uuid})
+        response = self.client.get(url)
+        self.assertEqual(200, response.status_code)
+        self.assertContains(response, 'Assessment:')
+        self.assertContains(response, 'assessment-not-accessible')
+        self.assertContains(response, 'not-accessible')
+
     def test_status_fragment_failed(self):
         """
         Checks that status fragment stops polling for failed status.
