@@ -135,7 +135,9 @@ def run_verapdf(pdf_path: Path, verapdf_cli_path: Path, timeout_seconds: float |
 def parse_verapdf_output(raw_output: str) -> dict[str, object]:
     """
     Parses the raw veraPDF JSON output into a Python dictionary.
+
     """
+    log.debug('starting parse_verapdf_output()')
     parsed_output = json.loads(raw_output)
     if not isinstance(parsed_output, dict):
         raise ValueError('veraPDF output is not a JSON object.')
@@ -149,6 +151,8 @@ def get_verapdf_compliant(raw_json: dict[str, object]) -> bool | None:
 
     Called by: get_accessibility_assessment()
     """
+    log.debug('starting get_verapdf_compliant()')
+    result: bool | None = None
     report_obj: object | None = raw_json.get('report')
     report: dict[str, object]
     if isinstance(report_obj, dict):
@@ -157,34 +161,26 @@ def get_verapdf_compliant(raw_json: dict[str, object]) -> bool | None:
         report = raw_json
 
     jobs_obj: object | None = report.get('jobs')
-    if not isinstance(jobs_obj, list) or not jobs_obj:
-        return None
+    if isinstance(jobs_obj, list) and jobs_obj:
+        jobs: list[object] = jobs_obj
 
-    jobs: list[object] = jobs_obj
+        job0_obj: object = jobs[0]
+        if isinstance(job0_obj, dict):
+            job0: dict[str, object] = job0_obj
 
-    job0_obj: object = jobs[0]
-    if not isinstance(job0_obj, dict):
-        return None
+            validation_result_obj: object | None = job0.get('validationResult')
+            if isinstance(validation_result_obj, list) and validation_result_obj:
+                validation_result: list[object] = validation_result_obj
 
-    job0: dict[str, object] = job0_obj
+                validation_result0_obj: object = validation_result[0]
+                if isinstance(validation_result0_obj, dict):
+                    validation_result0: dict[str, object] = validation_result0_obj
 
-    validation_result_obj: object | None = job0.get('validationResult')
-    if not isinstance(validation_result_obj, list) or not validation_result_obj:
-        return None
-
-    validation_result: list[object] = validation_result_obj
-
-    validation_result0_obj: object = validation_result[0]
-    if not isinstance(validation_result0_obj, dict):
-        return None
-
-    validation_result0: dict[str, object] = validation_result0_obj
-
-    compliant: object | None = validation_result0.get('compliant')
-    if isinstance(compliant, bool):
-        return compliant
-
-    return None
+                    compliant: object | None = validation_result0.get('compliant')
+                    if isinstance(compliant, bool):
+                        result = compliant
+    log.debug(f'result: ``{result}``')
+    return result
 
 
 def get_accessibility_assessment(raw_json: dict[str, object]) -> str | None:
@@ -193,12 +189,13 @@ def get_accessibility_assessment(raw_json: dict[str, object]) -> str | None:
 
     Called by: status_fragment()
     """
+    result: str | None = None
     compliant: bool | None = get_verapdf_compliant(raw_json)
-    if compliant is None:
-        return None
-    if compliant:
-        return 'accessible'
-    return 'not-accessible'
+    if compliant is True:
+        result = 'accessible'
+    elif compliant is False:
+        result = 'not-accessible'
+    return result
 
 
 def overwrite_verapdf_job_item_names(raw_json: dict[str, object]) -> None:

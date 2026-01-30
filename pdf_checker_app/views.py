@@ -37,18 +37,22 @@ def status_fragment(request, pk: uuid.UUID):
         verapdf_raw_json_data = VeraPDFResult.objects.filter(pdf_document=doc).values_list('raw_json', flat=True).first()
         if isinstance(verapdf_raw_json_data, dict):
             assessment = pdf_helpers.get_accessibility_assessment(verapdf_raw_json_data)
+    log.debug(f'assessment, ``{assessment}``')
 
     ## Determine if we should continue polling
     is_terminal = doc.processing_status in ('completed', 'failed')
 
+    context = {
+        'document': doc,
+        'is_terminal': is_terminal,
+        'assessment': assessment,
+    }
+    log.debug(f'context, ``{context}``')
+
     response = render(
         request,
         'pdf_checker_app/fragments/status_fragment.html',
-        {
-            'document': doc,
-            'is_terminal': is_terminal,
-            'assessment': assessment,
-        },
+        context,
     )
     response['Cache-Control'] = 'no-store'
     return response
