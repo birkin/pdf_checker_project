@@ -7,8 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Information Page</title>
     <meta name="description" content="Detailed information about {{ topic }}.">
-    <!-- call styles.css via django `static` template-tag -->
-    <link rel="stylesheet" href="{% static 'pdf_checker_app/css/styles.css' %}">
+    <!-- call info.css via django `static` template-tag -->
+    <link rel="stylesheet" href="{% static 'pdf_checker_app/css/info.css' %}">
     <!-- CSS _could_ be inserted directly like this, but the above approach is more common -->
     <!-- 
     <style>
@@ -38,7 +38,7 @@
     -->
 </head>
 <body>
-    <main class="container">
+    <main class="info-container">
         <h1>“{{ quote }}”</h1>
         <h1>— {{ author }}</h1>
         <p class="parenthetical">(Add "?format=json" to this url to see the data sent to the page.)</p>
