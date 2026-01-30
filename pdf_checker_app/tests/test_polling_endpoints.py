@@ -189,7 +189,7 @@ class SummaryFragmentTest(TestCase):
         url = reverse('summary_fragment_url', kwargs={'pk': self.test_uuid})
         response = self.client.get(url)
         self.assertEqual(200, response.status_code)
-        self.assertContains(response, 'Summary coming soon')
+        self.assertContains(response, 'Suggestions coming soon')
 
     def test_summary_fragment_pending(self):
         """
@@ -217,7 +217,7 @@ class SummaryFragmentTest(TestCase):
         response = self.client.get(url)
         self.assertEqual(200, response.status_code)
         self.assertContains(response, 'hx-get')
-        self.assertContains(response, 'Generating summary')
+        self.assertContains(response, 'Generating suggestions')
 
     def test_summary_fragment_completed(self):
         """
@@ -249,7 +249,7 @@ class SummaryFragmentTest(TestCase):
         url = reverse('summary_fragment_url', kwargs={'pk': self.test_uuid})
         response = self.client.get(url)
         self.assertEqual(200, response.status_code)
-        self.assertContains(response, 'Summary generation failed')
+        self.assertContains(response, 'Suggestion generation failed')
 
     def test_summary_fragment_cache_control(self):
         """

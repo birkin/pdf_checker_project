@@ -80,9 +80,9 @@ def summary_fragment(request, pk: uuid.UUID):
     log.debug(f'starting summary_fragment() for pk={pk}')
     doc = get_object_or_404(PDFDocument, pk=pk)
 
-    summary: OpenRouterSummary | None = None
+    suggestions: OpenRouterSummary | None = None
     try:
-        summary = doc.openrouter_summary
+        suggestions = doc.openrouter_summary
     except OpenRouterSummary.DoesNotExist:
         pass
 
@@ -91,7 +91,7 @@ def summary_fragment(request, pk: uuid.UUID):
         'pdf_checker_app/fragments/summary_fragment.html',
         {
             'document': doc,
-            'summary': summary,
+            'suggestions': suggestions,
         },
     )
     response['Cache-Control'] = 'no-store'
@@ -264,9 +264,9 @@ def view_report(request, pk: uuid.UUID):
             verapdf_raw_json = json.dumps(verapdf_raw_json_data, indent=2)
 
     ## Get OpenRouter summary if it exists
-    summary: OpenRouterSummary | None = None
+    suggestions: OpenRouterSummary | None = None
     try:
-        summary = doc.openrouter_summary
+        suggestions = doc.openrouter_summary
     except OpenRouterSummary.DoesNotExist:
         pass
 
@@ -276,6 +276,6 @@ def view_report(request, pk: uuid.UUID):
         {
             'document': doc,
             'verapdf_raw_json': verapdf_raw_json,
-            'summary': summary,
+            'suggestions': suggestions,
         },
     )
