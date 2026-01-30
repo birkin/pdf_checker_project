@@ -57,7 +57,8 @@ def generate_checksum(file: UploadedFile) -> str:
 def save_pdf_file(file: UploadedFile, checksum: str) -> Path:
     """
     Saves uploaded file to temporary storage.
-    Called by views.upload_pdf().
+    Called by:
+        - pdf_checker_app.views.upload_pdf()
     """
     upload_dir_path = Path(project_settings.PDF_UPLOAD_PATH)
     absolute_upload_dir_path = upload_dir_path.resolve()
@@ -151,7 +152,8 @@ def get_verapdf_compliant(raw_json: dict[str, object]) -> bool | None:
     """
     Extracts the compliance boolean from veraPDF JSON output.
 
-    Called by: get_accessibility_assessment()
+    Called by:
+        - get_accessibility_assessment()
     """
     log.debug('starting get_verapdf_compliant()')
     result: bool | None = None
@@ -206,7 +208,8 @@ def overwrite_verapdf_job_item_names(raw_json: dict[str, object]) -> None:
     """
     Overwrites the input-file path stored by veraPDF in jobs[].itemDetails.name.
 
-    Called by: parse_verapdf_output()
+    Called by:
+        - parse_verapdf_output()
     """
     jobs = raw_json.get('jobs')
     if not isinstance(jobs, list):
