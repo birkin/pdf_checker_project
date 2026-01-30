@@ -183,9 +183,11 @@ def call_openrouter_with_model_order(
     """
     last_exception: Exception | None = None
     response_json: dict = {}
+    log.debug('OpenRouter model order: %s', model_order)
 
-    for model in model_order:
+    for index, model in enumerate(model_order, start=1):
         try:
+            log.info('OpenRouter attempt %s/%s with model=%s', index, len(model_order), model)
             response_json = call_openrouter(prompt, api_key, model, timeout_seconds)
             last_exception = None
             break
