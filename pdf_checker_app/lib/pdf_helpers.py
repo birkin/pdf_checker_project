@@ -144,6 +144,11 @@ def parse_verapdf_output(raw_output: str) -> dict[str, object]:
 
 
 def overwrite_verapdf_job_item_names(raw_json: dict[str, object]) -> None:
+    """
+    Overwrites the input-file path stored by veraPDF in jobs[].itemDetails.name.
+
+    Called by: parse_verapdf_output()
+    """
     jobs = raw_json.get('jobs')
     if not isinstance(jobs, list):
         return

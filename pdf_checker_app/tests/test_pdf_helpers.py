@@ -34,6 +34,9 @@ class PDFHelperSaveTempFileTest(TestCase):
 
 class PDFHelperParseVeraPDFOutputTest(TestCase):
     def test_parse_verapdf_output_overwrites_job_item_name(self) -> None:
+        """
+        Checks that parse_verapdf_output() overwrites jobs[0].itemDetails.name.
+        """
         raw_output = (
             '{'
             '  "jobs": ['
