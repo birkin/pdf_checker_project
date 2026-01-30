@@ -30,3 +30,31 @@ class PDFHelperSaveTempFileTest(TestCase):
                 self.assertEqual(Path(temp_dir).resolve(), saved_path.parent)
                 self.assertTrue(saved_path.exists())
                 self.assertEqual(content, saved_path.read_bytes())
+
+
+class PDFHelperParseVeraPDFOutputTest(TestCase):
+    def test_parse_verapdf_output_overwrites_job_item_name(self) -> None:
+        """
+        Checks that parse_verapdf_output() overwrites jobs[0].itemDetails.name.
+        """
+        raw_output = (
+            '{'
+            '  "jobs": ['
+            '    {'
+            '      "itemDetails": {'
+            '        "name": "/Users/birkin/Documents/Brown_Library/djangoProjects/pdf_checker_stuff/pdf_uploads/test.pdf",'
+            '        "size": 123'
+            '      }'
+            '    }'
+            '  ]'
+            '}'
+        )
+
+        parsed = pdf_helpers.parse_verapdf_output(raw_output)
+        jobs = parsed.get('jobs')
+        self.assertIsInstance(jobs, list)
+        first_job = jobs[0]
+        self.assertIsInstance(first_job, dict)
+        item_details = first_job.get('itemDetails')
+        self.assertIsInstance(item_details, dict)
+        self.assertEqual(item_details.get('name'), '/path/to/pdf_uploads/test.pdf')

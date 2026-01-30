@@ -2,11 +2,12 @@ import datetime
 import json
 import logging
 import uuid
+from pathlib import Path
 
 import trio
 from django.conf import settings as project_settings
 from django.contrib import messages
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
@@ -174,7 +175,7 @@ def root(request):
 # -------------------------------------------------------------------
 
 
-def upload_pdf(request):
+def upload_pdf(request: HttpRequest) -> HttpResponse:
     """
     Handles PDF upload with synchronous processing attempt.
 
@@ -188,13 +189,13 @@ def upload_pdf(request):
             pdf_file = form.cleaned_data['pdf_file']
 
             ## Get Shibboleth user info
-            user_info = pdf_helpers.get_shibboleth_user_info(request)
+            user_info: dict[str, str | list[str]] = pdf_helpers.get_shibboleth_user_info(request)
 
             ## Generate checksum
-            checksum = pdf_helpers.generate_checksum(pdf_file)
+            checksum: str = pdf_helpers.generate_checksum(pdf_file)
 
             ## Check if already processed
-            existing_doc = PDFDocument.objects.filter(file_checksum=checksum).first()
+            existing_doc: PDFDocument | None = PDFDocument.objects.filter(file_checksum=checksum).first()
 
             if existing_doc and existing_doc.processing_status == 'completed':
                 messages.info(request, 'This PDF has already been processed.')
@@ -207,13 +208,13 @@ def upload_pdf(request):
 
             ## For failed docs, allow re-upload by resetting to pending
             if existing_doc and existing_doc.processing_status == 'failed':
-                doc = existing_doc
+                doc: PDFDocument = existing_doc
                 doc.processing_status = 'pending'
                 doc.processing_error = None
                 doc.save(update_fields=['processing_status', 'processing_error'])
             else:
                 ## Create new document record with Shibboleth user info
-                doc = PDFDocument.objects.create(
+                doc: PDFDocument = PDFDocument.objects.create(
                     original_filename=pdf_file.name,
                     file_checksum=checksum,
                     file_size=pdf_file.size,
@@ -226,7 +227,7 @@ def upload_pdf(request):
 
             ## Save file
             try:
-                pdf_path = pdf_helpers.save_pdf_file(pdf_file, checksum)
+                pdf_path: Path = pdf_helpers.save_pdf_file(pdf_file, checksum)
                 log.debug(f'saved PDF file to {pdf_path}')
             except Exception as exc:
                 log.exception('Failed to save PDF file')
@@ -246,9 +247,11 @@ def upload_pdf(request):
                 messages.success(request, 'PDF uploaded successfully. Processing in progress.')
             return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
     else:
-        form = PDFUploadForm()
+        form: PDFUploadForm = PDFUploadForm()
 
     return render(request, 'pdf_checker_app/upload.html', {'form': form})
+
+    ## end def upload_pdf()
 
 
 def view_report(request, pk: uuid.UUID):
