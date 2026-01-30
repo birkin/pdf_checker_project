@@ -143,6 +143,14 @@ def call_openrouter(prompt: str, api_key: str, model: str, timeout_seconds: floa
 
     with httpx.Client(**client_kwargs) as client:
         response = client.post(OPENROUTER_API_URL, headers=headers, json=payload)
+        log.debug(f'response, ``{response}``')
+        if response.is_error:
+            log.error(
+                'OpenRouter request failed with status=%s, model=%s, response=%s',
+                response.status_code,
+                model,
+                response.text,
+            )
         response.raise_for_status()
         jsn_response = response.json()
         log.debug(f'jsn_response, ``{jsn_response}``')
