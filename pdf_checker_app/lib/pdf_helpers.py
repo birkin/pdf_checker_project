@@ -139,7 +139,28 @@ def parse_verapdf_output(raw_output: str) -> dict[str, object]:
     parsed_output = json.loads(raw_output)
     if not isinstance(parsed_output, dict):
         raise ValueError('veraPDF output is not a JSON object.')
+    overwrite_verapdf_job_item_names(parsed_output)
     return parsed_output
+
+
+def overwrite_verapdf_job_item_names(raw_json: dict[str, object]) -> None:
+    jobs = raw_json.get('jobs')
+    if not isinstance(jobs, list):
+        return
+
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+
+        item_details = job.get('itemDetails')
+        if not isinstance(item_details, dict):
+            continue
+
+        name = item_details.get('name')
+        if not isinstance(name, str):
+            continue
+
+        item_details['name'] = f'/path/to/pdf_uploads/{Path(name).name}'
 
 
 def save_verapdf_result(document_id: uuid.UUID, raw_json: dict[str, object]) -> VeraPDFResult:
