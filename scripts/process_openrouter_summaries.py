@@ -20,7 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 
 ## Django setup - must happen before importing Django models
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -30,8 +30,12 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 ## Load environment variables
+log = logging.getLogger(__name__)
 dotenv_path = project_root.parent / '.env'
-load_dotenv(find_dotenv(str(dotenv_path), raise_error_if_not_found=True), override=True)
+if dotenv_path.exists():
+    load_dotenv(str(dotenv_path), override=True)
+else:
+    log.debug(f'.env file not found at {dotenv_path}; skipping dotenv load')
 
 import django  # noqa: E402
 
@@ -43,8 +47,6 @@ from django.utils import timezone as django_timezone  # noqa: E402
 
 from pdf_checker_app.lib import openrouter_helpers  # noqa: E402
 from pdf_checker_app.models import OpenRouterSummary, PDFDocument, VeraPDFResult  # noqa: E402
-
-log = logging.getLogger(__name__)
 
 
 def get_api_key() -> str:
