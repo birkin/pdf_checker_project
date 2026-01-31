@@ -42,6 +42,11 @@ EMAIL_PORT="1026"  # will be converted to int in settings.py
 LOG_PATH="../logs/pdf_checker_project.log"
 LOG_LEVEL="DEBUG"
 
+## OpenRouter (comma-delimited model order)
+OPENROUTER_API_KEY=""
+OPENROUTER_MODEL_ORDER="openrouter/model-one,openrouter/model-two"
+SYSTEM_CA_BUNDLE=""  # optional: path to non-default CA bundle
+
 
 ## https://docs.djangoproject.com/en/5.2/topics/cache/
 ## - TIMEOUT is in seconds (0 means don't cache); CULL_FREQUENCY defaults to one-third

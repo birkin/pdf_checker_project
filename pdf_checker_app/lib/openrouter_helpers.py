@@ -8,10 +8,10 @@ Called by:
 
 import json
 import logging
-import os
 from datetime import datetime, timezone
 
 import httpx
+from django.conf import settings as project_settings
 from django.utils import timezone as django_timezone
 
 from pdf_checker_app.models import OpenRouterSummary
@@ -52,17 +52,14 @@ def get_api_key() -> str:
     """
     Retrieves the OpenRouter API key from environment.
     """
-    api_key: str = os.environ.get('OPENROUTER_API_KEY', '')
-    return api_key
+    return project_settings.OPENROUTER_API_KEY
 
 
 def get_model_order() -> list[str]:
     """
     Retrieves the OpenRouter model order from environment.
     """
-    raw_value: str = os.environ.get('OPENROUTER_MODEL_ORDER', '')
-    model_order = [model.strip() for model in raw_value.split(',') if model.strip()]
-    return model_order
+    return list(project_settings.OPENROUTER_MODEL_ORDER)
 
 
 def filter_down_failure_checks(raw_verapdf_json: dict) -> dict:
@@ -138,9 +135,9 @@ def call_openrouter(prompt: str, api_key: str, model: str, timeout_seconds: floa
     payload = {'model': model, 'messages': [{'role': 'user', 'content': prompt}]}
 
     client_kwargs = {'timeout': timeout_seconds}
-    SYSTEM_CA_BUNDLE = os.environ.get('SYSTEM_CA_BUNDLE')  # path to a non-default certificate-authority bundle file
-    if SYSTEM_CA_BUNDLE:
-        client_kwargs['verify'] = SYSTEM_CA_BUNDLE
+    system_ca_bundle = project_settings.SYSTEM_CA_BUNDLE
+    if system_ca_bundle:
+        client_kwargs['verify'] = system_ca_bundle
 
     with httpx.Client(**client_kwargs) as client:
         response = client.post(OPENROUTER_API_URL, headers=headers, json=payload)

@@ -20,8 +20,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 ## Django setup - must happen before importing Django models
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
@@ -29,13 +27,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-## Load environment variables
 log = logging.getLogger(__name__)
-dotenv_path = project_root.parent / '.env'
-if dotenv_path.exists():
-    load_dotenv(str(dotenv_path), override=True)
-else:
-    log.debug(f'.env file not found at {dotenv_path}; skipping dotenv load')
 
 import django  # noqa: E402
 

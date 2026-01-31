@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 ## django project settings ------------------------------------------
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+BASE_DIR: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent
 # log.debug( f'BASE_DIR, ``{BASE_DIR}``' )
 
 
@@ -38,20 +38,20 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECRET_KEY = 'django-insecure-3ory+ty87_wq8-21ki6d&a+x=z9_$2m(gr4@vxri@@^g7u!*oc'
-SECRET_KEY = os.environ['SECRET_KEY']
+SECRET_KEY: str = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
-DEBUG = json.loads(os.environ['DEBUG_JSON'])
+DEBUG: bool = json.loads(os.environ['DEBUG_JSON'])
 
-ADMINS = json.loads(os.environ['ADMINS_JSON'])
+ADMINS: list[list[str]] = json.loads(os.environ['ADMINS_JSON'])
 
-ALLOWED_HOSTS = json.loads(os.environ['ALLOWED_HOSTS_JSON'])
-CSRF_TRUSTED_ORIGINS = json.loads(os.environ['CSRF_TRUSTED_ORIGINS_JSON'])
+ALLOWED_HOSTS: list[str] = json.loads(os.environ['ALLOWED_HOSTS_JSON'])
+CSRF_TRUSTED_ORIGINS: list[str] = json.loads(os.environ['CSRF_TRUSTED_ORIGINS_JSON'])
 
 # Application definition
 
-INSTALLED_APPS = [
+INSTALLED_APPS: list[str] = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -61,7 +61,7 @@ INSTALLED_APPS = [
     'pdf_checker_app',
 ]
 
-MIDDLEWARE = [
+MIDDLEWARE: list[str] = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -73,7 +73,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
-TEMPLATES = [
+TEMPLATES: list[dict[str, object]] = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         # 'DIRS': [ '%s/pdf_checker_app' % BASE_DIR ],
@@ -95,12 +95,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-DATABASES = json.loads(os.environ['DATABASES_JSON'])
+DATABASES: dict[str, object] = json.loads(os.environ['DATABASES_JSON'])
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
+AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
@@ -119,38 +119,38 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE: str = 'en-us'
 
 # TIME_ZONE = 'UTC'  ## the default
-TIME_ZONE = 'America/New_York'
+TIME_ZONE: str = 'America/New_York'
 
-USE_I18N = True
+USE_I18N: bool = True
 
 # USE_TZ = True  ## the default
-USE_TZ = False
+USE_TZ: bool = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = os.environ['STATIC_URL']
-STATIC_ROOT = os.environ['STATIC_ROOT']  # needed for collectstatic command
+STATIC_URL: str = os.environ['STATIC_URL']
+STATIC_ROOT: str = os.environ['STATIC_ROOT']  # needed for collectstatic command
 
 # Email
-SERVER_EMAIL = os.environ['SERVER_EMAIL']
-EMAIL_HOST = os.environ['EMAIL_HOST']
-EMAIL_PORT = int(os.environ['EMAIL_PORT'])
+SERVER_EMAIL: str = os.environ['SERVER_EMAIL']
+EMAIL_HOST: str = os.environ['EMAIL_HOST']
+EMAIL_PORT: int = int(os.environ['EMAIL_PORT'])
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD: str = 'django.db.models.BigAutoField'
 
 ## reminder:
 ## "Each 'logger' will pass messages above its log-level to its associated 'handlers',
 ## ...which will then output messages above the handler's own log-level."
-LOGGING = {
+LOGGING: dict[str, object] = {
     'version': 1,
     'disable_existing_loggers': True,
     'formatters': {
@@ -200,15 +200,21 @@ LOGGING = {
 ## app-level settings -----------------------------------------------
 
 ## veraPDF Configuration
-VERAPDF_PATH = os.environ['VERAPDF_PATH']
-VERAPDF_PROFILE = os.environ['VERAPDF_PROFILE']  # for now using `PDFUA_1_MACHINE`
+VERAPDF_PATH: str = os.environ['VERAPDF_PATH']
+VERAPDF_PROFILE: str = os.environ['VERAPDF_PROFILE']  # for now using `PDFUA_1_MACHINE`
+
+## OpenRouter configuration
+OPENROUTER_API_KEY: str = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL_ORDER_RAW: str = os.environ.get('OPENROUTER_MODEL_ORDER', '')
+OPENROUTER_MODEL_ORDER: list[str] = [model.strip() for model in OPENROUTER_MODEL_ORDER_RAW.split(',') if model.strip()]
+SYSTEM_CA_BUNDLE: str = os.environ.get('SYSTEM_CA_BUNDLE', '')
 
 ## File Upload Settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE: int = 52428800  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE: int = 52428800  # 50MB
 
 ## Temp file storage
-PDF_UPLOAD_PATH = os.environ['PDF_UPLOAD_PATH']
+PDF_UPLOAD_PATH: str = os.environ['PDF_UPLOAD_PATH']
 
 ## Synchronous processing timeouts (web requests)
 VERAPDF_SYNC_TIMEOUT_SECONDS: float = 30.0
