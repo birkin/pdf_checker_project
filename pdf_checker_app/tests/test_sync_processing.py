@@ -136,7 +136,8 @@ class SyncOpenRouterProcessingTest(TestCase):
 
         with patch('pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value='test-key'):
             with patch(
-                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model', return_value='test-model'
+                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model_order',
+                return_value=['test-model'],
             ):
                 with patch(
                     'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.filter_down_failure_checks',
@@ -167,7 +168,8 @@ class SyncOpenRouterProcessingTest(TestCase):
         """
         with patch('pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value='test-key'):
             with patch(
-                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model', return_value='test-model'
+                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model_order',
+                return_value=['test-model'],
             ):
                 with patch(
                     'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.filter_down_failure_checks',
@@ -194,7 +196,8 @@ class SyncOpenRouterProcessingTest(TestCase):
         """
         with patch('pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value='test-key'):
             with patch(
-                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model', return_value='test-model'
+                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model_order',
+                return_value=['test-model'],
             ):
                 with patch(
                     'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.filter_down_failure_checks',
@@ -221,7 +224,8 @@ class SyncOpenRouterProcessingTest(TestCase):
         """
         with patch('pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value=''):
             with patch(
-                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model', return_value='test-model'
+                'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model_order',
+                return_value=['test-model'],
             ):
                 result = attempt_openrouter_sync(self.doc)
 
@@ -338,8 +342,8 @@ class FullSyncProcessingTest(TestCase):
                         'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value='test-key'
                     ):
                         with patch(
-                            'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model',
-                            return_value='test-model',
+                            'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_model_order',
+                            return_value=['test-model'],
                         ):
                             with patch(
                                 'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.filter_down_failure_checks',
