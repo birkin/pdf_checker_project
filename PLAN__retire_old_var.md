@@ -47,6 +47,12 @@ Your intent is solid. The current implementation already prefers `OPENROUTER_MOD
 4. **Testing (minimal)** — ❌ pending
    - `uv run ./run_tests.py` now fails because tests patch `openrouter_helpers.get_model()`.
    - Update `pdf_checker_app/tests/test_sync_processing.py` to stop patching `get_model()` and instead patch `get_model_order()`.
+     - Affected tests (from failing output):
+       - `SyncOpenRouterProcessingTest.test_openrouter_sync_success`
+       - `SyncOpenRouterProcessingTest.test_openrouter_sync_timeout_fallback`
+       - `SyncOpenRouterProcessingTest.test_openrouter_sync_error_marks_failed`
+       - `SyncOpenRouterProcessingTest.test_openrouter_skipped_without_credentials`
+       - `FullSyncProcessingTest.test_full_sync_success_path`
    - Consider adding a focused unit test for `get_model_order()` behavior (empty string -> `[]`).
 
 ## Context for a future work session
