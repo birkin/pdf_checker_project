@@ -243,16 +243,19 @@ def save_verapdf_result(document_id: uuid.UUID, raw_json: dict[str, object]) -> 
     """
     Persists raw veraPDF JSON output for a document.
     """
+    compliant = get_verapdf_compliant(raw_json)
+    is_accessible = compliant if compliant is not None else False
     result, created = VeraPDFResult.objects.get_or_create(
         pdf_document_id=document_id,
         defaults={
             'raw_json': raw_json,
-            'is_accessible': False,
+            'is_accessible': is_accessible,
             'validation_profile': 'PDF/UA-1',
             'verapdf_version': 'unknown',
         },
     )
     if not created:  # exists; will overwrite
         result.raw_json = raw_json
-        result.save(update_fields=['raw_json'])
+        result.is_accessible = is_accessible
+        result.save(update_fields=['raw_json', 'is_accessible'])
     return result

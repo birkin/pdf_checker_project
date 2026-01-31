@@ -67,6 +67,7 @@ def find_pending_summaries(batch_size: int) -> list[PDFDocument]:
         PDFDocument.objects.filter(processing_status='completed')
         .exclude(openrouter_summary__isnull=False)
         .filter(verapdf_result__isnull=False)
+        .exclude(verapdf_result__is_accessible=True)
         .order_by('uploaded_at')[:batch_size]
     )
 
@@ -77,6 +78,7 @@ def find_pending_summaries(batch_size: int) -> list[PDFDocument]:
         )
         .filter(Q(openrouter_summary__status='pending') | Q(openrouter_summary__status='failed'))
         .filter(verapdf_result__isnull=False)
+        .exclude(verapdf_result__is_accessible=True)
         .order_by('uploaded_at')[:batch_size]
     )
 

@@ -1,5 +1,7 @@
 # Plan: Skip OpenRouter when veraPDF says accessible
 
+Before making any coding changes, review `pdf_checker_project/AGENTS.md` for coding preferences.
+
 ## Goal
 Avoid calling OpenRouter (sync and cron) when veraPDF reports the PDF is accessible. OpenRouter should only generate user-facing suggestions for non-accessible PDFs.
 
@@ -36,7 +38,7 @@ Avoid calling OpenRouter (sync and cron) when veraPDF reports the PDF is accessi
 
 2. **Short-circuit OpenRouter in sync processing**
    - In `attempt_synchronous_processing()`, after `attempt_verapdf_sync()` succeeds, load the veraPDF result and skip `attempt_openrouter_sync()` when `is_accessible` is `True`.
-   - Consider logging a concise `info` message when skipping.
+   - Log a concise `info` message when skipping.
 
 3. **Prevent cron from selecting accessible docs**
    - Update `find_pending_summaries()` to exclude documents with `verapdf_result__is_accessible=True`.

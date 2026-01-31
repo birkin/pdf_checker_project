@@ -289,6 +289,58 @@ class CronSelectionLogicTest(TestCase):
         self.assertIn(doc, jobs)
 
 
+class OpenRouterCronSelectionTest(TestCase):
+    """
+    Checks OpenRouter summary cron selection logic for accessibility rules.
+    """
+
+    def test_find_pending_summaries_excludes_accessible(self) -> None:
+        """
+        Checks that accessible documents are excluded from summary generation.
+        """
+        accessible_doc = PDFDocument.objects.create(
+            original_filename='accessible.pdf',
+            file_checksum='accessible_checksum',
+            file_size=1024,
+            processing_status='completed',
+        )
+        VeraPDFResult.objects.create(
+            pdf_document=accessible_doc,
+            raw_json={'jobs': []},
+            is_accessible=True,
+            validation_profile='PDF/UA-1',
+            verapdf_version='1.0',
+        )
+
+        from scripts.process_openrouter_summaries import find_pending_summaries
+
+        result = find_pending_summaries(batch_size=10)
+        self.assertNotIn(accessible_doc, result)
+
+    def test_find_pending_summaries_includes_not_accessible(self) -> None:
+        """
+        Checks that non-accessible documents are included for summary generation.
+        """
+        doc = PDFDocument.objects.create(
+            original_filename='needs_suggestions.pdf',
+            file_checksum='needs_suggestions_checksum',
+            file_size=1024,
+            processing_status='completed',
+        )
+        VeraPDFResult.objects.create(
+            pdf_document=doc,
+            raw_json={'jobs': []},
+            is_accessible=False,
+            validation_profile='PDF/UA-1',
+            verapdf_version='1.0',
+        )
+
+        from scripts.process_openrouter_summaries import find_pending_summaries
+
+        result = find_pending_summaries(batch_size=10)
+        self.assertIn(doc, result)
+
+
 class FullSyncProcessingTest(TestCase):
     """
     Checks full synchronous processing orchestration.
@@ -332,12 +384,24 @@ class FullSyncProcessingTest(TestCase):
             'total_tokens': 30,
         }
 
+        def create_verapdf_result(*args, **kwargs):
+            VeraPDFResult.objects.create(
+                pdf_document=self.doc,
+                raw_json=mock_verapdf_parsed,
+                is_accessible=False,
+                validation_profile='PDF/UA-1',
+                verapdf_version='1.0',
+            )
+
         with patch('pdf_checker_app.lib.sync_processing_helpers.pdf_helpers.run_verapdf', return_value=mock_verapdf_output):
             with patch(
                 'pdf_checker_app.lib.sync_processing_helpers.pdf_helpers.parse_verapdf_output',
                 return_value=mock_verapdf_parsed,
             ):
-                with patch('pdf_checker_app.lib.sync_processing_helpers.pdf_helpers.save_verapdf_result'):
+                with patch(
+                    'pdf_checker_app.lib.sync_processing_helpers.pdf_helpers.save_verapdf_result',
+                    side_effect=create_verapdf_result,
+                ):
                     with patch(
                         'pdf_checker_app.lib.sync_processing_helpers.openrouter_helpers.get_api_key', return_value='test-key'
                     ):
@@ -369,6 +433,54 @@ class FullSyncProcessingTest(TestCase):
         self.doc.refresh_from_db()
         self.assertEqual(self.doc.processing_status, 'completed')
         self.assertIsNotNone(self.doc.processing_started_at)
+
+    def test_sync_skips_openrouter_when_accessible(self) -> None:
+        """
+        Checks that OpenRouter is skipped when veraPDF marks the PDF accessible.
+        """
+
+        def create_verapdf_result(*args, **kwargs) -> bool:
+            VeraPDFResult.objects.create(
+                pdf_document=self.doc,
+                raw_json={'jobs': []},
+                is_accessible=True,
+                validation_profile='PDF/UA-1',
+                verapdf_version='1.0',
+            )
+            return True
+
+        with patch(
+            'pdf_checker_app.lib.sync_processing_helpers.attempt_verapdf_sync',
+            side_effect=create_verapdf_result,
+        ):
+            with patch('pdf_checker_app.lib.sync_processing_helpers.attempt_openrouter_sync') as mock_openrouter:
+                attempt_synchronous_processing(self.doc, self.pdf_path)
+
+        mock_openrouter.assert_not_called()
+
+    def test_sync_runs_openrouter_when_not_accessible(self) -> None:
+        """
+        Checks that OpenRouter runs when veraPDF marks the PDF not accessible.
+        """
+
+        def create_verapdf_result(*args, **kwargs) -> bool:
+            VeraPDFResult.objects.create(
+                pdf_document=self.doc,
+                raw_json={'jobs': []},
+                is_accessible=False,
+                validation_profile='PDF/UA-1',
+                verapdf_version='1.0',
+            )
+            return True
+
+        with patch(
+            'pdf_checker_app.lib.sync_processing_helpers.attempt_verapdf_sync',
+            side_effect=create_verapdf_result,
+        ):
+            with patch('pdf_checker_app.lib.sync_processing_helpers.attempt_openrouter_sync') as mock_openrouter:
+                attempt_synchronous_processing(self.doc, self.pdf_path)
+
+        mock_openrouter.assert_called_once()
 
     def test_verapdf_timeout_stops_openrouter_attempt(self) -> None:
         """

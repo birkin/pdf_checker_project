@@ -39,6 +39,11 @@ def attempt_synchronous_processing(doc: PDFDocument, pdf_path: Path) -> None:
         return
 
     ## If veraPDF succeeded, attempt OpenRouter
+    verapdf_result = VeraPDFResult.objects.get(pdf_document=doc)
+    if verapdf_result.is_accessible:
+        log.info(f'Skipping OpenRouter for accessible document {doc.pk}')
+        return
+
     attempt_openrouter_sync(doc)
 
 
