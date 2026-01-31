@@ -7,11 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PDF Accessibility Checker{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'pdf_checker_app/css/base.css' %}">
-    <link rel="stylesheet" href="https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css">
+    {% include "pdf_checker_app/includes/pattern_header/head.html" %}
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    {% include "pdf_checker_app/includes/pattern_header.html" %}
+    {% include "pdf_checker_app/includes/pattern_header/body.html" %}
     <div class="container">
         {% if messages %}
             <div class="messages">
