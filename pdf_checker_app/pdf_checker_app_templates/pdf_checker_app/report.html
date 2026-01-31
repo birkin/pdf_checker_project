@@ -36,7 +36,7 @@
     {% if document.processing_status == 'completed' and verapdf_raw_json %}
     <div id="verapdf-container" class="raw-json">
         <h2>veraPDF Response</h2>
-        <p id="verapdf-comfort-note">Note: veraPDF may report thousands of "failed checks" -- but that does _not_ mean thousands of distinct problems. Think of a "failed check" as a repeated warning bell, not a separate task. Example: if the PDF lacks a language setting, or proper tagging, veraPDF will flag each affected text snippet or layout element, inflating totals. Remediation work should target a few root causes, which can clear thousands of checks quickly.</p>
+        <p id="verapdf-comfort-note">Note: veraPDF may sometimes report thousands of "failed checks" -- but that does _not_ mean thousands of distinct problems. Think of a "failed check" as a repeated warning bell, not a separate task. Example: if the PDF lacks a language setting, or proper tagging, veraPDF will flag each affected text snippet or layout element, inflating totals. Remediation work should target a few root causes, which can clear thousands of checks quickly.</p>
         <details>
             <summary>Show raw JSON</summary>
             <pre>{{ verapdf_raw_json }}</pre>

@@ -259,7 +259,7 @@ def upload_pdf(request: HttpRequest) -> HttpResponse:
 
             ## Redirect to report page
             if doc.processing_status == 'completed':
-                messages.success(request, 'PDF processed successfully!')
+                messages.success(request, 'PDF processed.')
             else:
                 messages.success(request, 'PDF uploaded successfully. Processing in progress.')
             return HttpResponseRedirect(reverse('pdf_report_url', kwargs={'pk': doc.pk}))
