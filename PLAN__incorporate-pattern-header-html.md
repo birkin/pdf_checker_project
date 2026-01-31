@@ -33,7 +33,7 @@ The pattern header contains placeholder URLs that will need dynamic generation:
 
 ### Plan Notes / Corrections (from review)
 - The upstream `pattern_header_html.html` begins with a `<link rel="stylesheet" ...>` tag. If we include the entire file in the `<body>`, that `<link>` will end up in the body, which is invalid HTML (most browsers tolerate it, but it is better to place stylesheet links in the `<head>`).
-- If you choose the **standalone script** route, reading `PATTERN_HEADER_URL` from `.env` will require the script to load `.env` explicitly (because it won’t automatically run Django’s settings module). The **management command** path avoids this because `manage.py` imports settings, and settings already loads `.env`.
+- To match existing helper-script patterns in `pdf_checker_project/scripts/`, any standalone script should initialize Django (`DJANGO_SETTINGS_MODULE=config.settings`, `django.setup()`), then read `PATTERN_HEADER_URL` from `django.conf.settings` (not from `os.environ[...]` on the fly).
 - The example code snippets use some early-returns. That’s fine for a plan, but during implementation we should try to keep closer to your “prefer single-return functions” directive where practical.
 
 ---
@@ -112,6 +112,10 @@ The pattern header contains placeholder URLs that will need dynamic generation:
 ### Purpose
 Fetch the latest pattern header HTML from a remote URL and update the local copy.
 
+Operational constraints:
+- This update will be run **manually only** (never auto-run).
+- The `PATTERN_HEADER_URL` source is considered **trusted**.
+
 ### Implementation Options
 
 #### Option A: Standalone Script in `scripts/`
@@ -120,34 +124,36 @@ Fetch the latest pattern header HTML from a remote URL and update the local copy
 
 **Structure**:
 ```python
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Updates the pattern header HTML from a remote source.
 """
 
 import argparse
+import logging
 import pathlib
 import sys
+from pathlib import Path
 
 import httpx
 
+## Django setup - must happen before importing Django settings
+import os
 
-def load_dotenv_for_script() -> None:
-    """
-    Loads the project's .env file.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-    Note: This is needed for standalone scripts because Django settings (which already load .env)
-    are not imported.
-    """
-    import pathlib
+## Add project root to path
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
-    from dotenv import find_dotenv, load_dotenv
+import django  # noqa: E402
 
-    ## Match config/settings.py behavior: .env is expected one level above pdf_checker_project/
-    project_root: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent
-    dotenv_path: pathlib.Path = project_root.parent / '.env'
-    load_dotenv(find_dotenv(str(dotenv_path), raise_error_if_not_found=True), override=True)
+django.setup()
 
+from django.conf import settings as project_settings  # noqa: E402
+
+
+log = logging.getLogger(__name__)
 
 def fetch_pattern_header(url: str) -> str:
     """
@@ -173,20 +179,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Update pattern header HTML from remote source')
     parser.add_argument('--url', help='Override URL from environment variable')
     parser.add_argument('--dry-run', action='store_true', help='Fetch but do not save')
+    parser.add_argument(
+        '--verbose',
+        '-v',
+        action='store_true',
+        help='Enable verbose logging',
+    )
     args = parser.parse_args()
     
-    load_dotenv_for_script()
+    ## Configure logging (match other scripts)
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format='[%(asctime)s] %(levelname)s [%(module)s-%(funcName)s()::%(lineno)d] %(message)s',
+        datefmt='%d/%b/%Y %H:%M:%S',
+    )
 
-    ## Get URL from args or environment
-    import os
-    url: str = args.url or os.environ.get('PATTERN_HEADER_URL', '')
+    ## Get URL from args or settings
+    url: str = args.url or getattr(project_settings, 'PATTERN_HEADER_URL', '')
     if not url:
-        print('Error: PATTERN_HEADER_URL not set and --url not provided', file=sys.stderr)
+        print('Error: PATTERN_HEADER_URL not set in settings and --url not provided', file=sys.stderr)
         sys.exit(1)
     
     ## Determine target path based on chosen approach
     ## For Option 1: pdf_checker_app/pdf_checker_app_templates/pdf_checker_app/includes/pattern_header.html
-    ## For Option 2: pdf_checker_app/lib/pattern_header.html
     project_root: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent
     target_path: pathlib.Path = project_root / 'pdf_checker_app' / 'pdf_checker_app_templates' / 'pdf_checker_app' / 'includes' / 'pattern_header.html'
     
@@ -210,7 +226,7 @@ if __name__ == '__main__':
 
 **Usage**:
 ```bash
-# Using environment variable
+# Using Django settings (which loads `.env` via config/settings.py)
 uv run ./scripts/update_pattern_header.py
 
 # Override URL
@@ -225,6 +241,9 @@ Add to `.env`:
 ```
 PATTERN_HEADER_URL=https://dlibwwwcit.services.brown.edu/common/includes/pattern_header.html
 ```
+
+**Note on `.env` loading**:
+- This script calls `django.setup()` with `DJANGO_SETTINGS_MODULE=config.settings`, so the existing settings module will load `.env` using its established mechanism.
 
 ---
 
@@ -271,13 +290,13 @@ class Command(BaseCommand):
         """
         Executes the command.
         """
-        ## manage.py loads Django settings, and settings loads .env.
-        ## So PATTERN_HEADER_URL should already be available here.
-
         ## Get URL
-        url: str = options.get('url') or os.environ.get('PATTERN_HEADER_URL', '')
+        ## Preferred: read from Django settings (settings loads .env per config/settings.py)
+        from django.conf import settings as project_settings
+
+        url: str = options.get('url') or getattr(project_settings, 'PATTERN_HEADER_URL', '')
         if not url:
-            self.stdout.write(self.style.ERROR('PATTERN_HEADER_URL not set and --url not provided'))
+            self.stdout.write(self.style.ERROR('PATTERN_HEADER_URL not set in settings and --url not provided'))
             return
         
         ## Determine target path
@@ -334,7 +353,9 @@ uv run ./manage.py update_pattern_header --dry-run
 4. No performance overhead from file I/O on every request
 5. Clear separation: templates in template directory, update logic in management command
 
-**Alternative**: If the pattern header needs to be updated very frequently or automatically, consider **Option 2 (Template Tag)** with caching to reduce I/O overhead.
+Rationale given your constraints:
+- You want updates to be **manual-only** and “discoverable”; a management command is easy to document and run.
+- You prefer `.env` values to be loaded into Django settings; both `manage.py` and the command naturally follow that.
 
 ---
 
@@ -372,6 +393,14 @@ Add to `.env` (if not already present):
 ```
 PATTERN_HEADER_URL=https://dlibwwwcit.services.brown.edu/common/includes/pattern_header.html
 ```
+
+Implementation detail to consider:
+- In `config/settings.py`, prefer defining `PATTERN_HEADER_URL` as:
+  - `PATTERN_HEADER_URL: str = os.environ.get('PATTERN_HEADER_URL', '')`
+  - This avoids breaking normal app startup if the value is absent (since it’s only used for the manual update operation).
+- In `config/settings_ci_tests.py`, set a safe default like:
+  - `PATTERN_HEADER_URL: str = ''`
+  - This prevents attribute errors if CI imports or references settings.
 
 ### Step 6: Test
 1. Run development server: `uv run ./manage.py runserver`
@@ -422,24 +451,6 @@ TEMPLATES = [
 ]
 ```
 
-### Caching
-If using Option 2 (template tag), consider adding Django caching:
-```python
-from django.core.cache import cache
-
-@register.simple_tag
-def pattern_header() -> str:
-    cache_key: str = 'pattern_header_html'
-    cached_content: str | None = cache.get(cache_key)
-    if cached_content:
-        return mark_safe(cached_content)
-    
-    header_path: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent / 'lib' / 'pattern_header.html'
-    html_content: str = header_path.read_text(encoding='utf-8')
-    cache.set(cache_key, html_content, 3600)  # Cache for 1 hour
-    return mark_safe(html_content)
-```
-
 ---
 
 ## Dependencies
@@ -462,28 +473,12 @@ def pattern_header() -> str:
 5. Verify external CSS loads correctly
 
 ### Automated Testing
-Consider adding a test for the management command:
-
-**File**: `pdf_checker_project/pdf_checker_app/tests/test_management_commands.py`
-```python
-from django.core.management import call_command
-from django.test import TestCase
-import pathlib
-
-
-class UpdatePatternHeaderTests(TestCase):
-    """
-    Tests for update_pattern_header management command.
-    """
-    
-    def test_dry_run(self) -> None:
-        """
-        Checks that dry run does not save file.
-        """
-        ## This would need a mock URL or test server
-        ## Placeholder for future implementation
-        pass
-```
+Recommendation:
+- Since the update is **manual-only** and hits the network, avoid adding tests that fetch remote content.
+- If you want automated coverage later, prefer a pure-unit test of parsing/saving logic with:
+  - a temporary filesystem path
+  - `httpx` mocked
+  - `DJANGO_SETTINGS_MODULE=config.settings_ci_tests` (so CI doesn’t require a `.env`)
 
 ---
 
@@ -503,7 +498,8 @@ class UpdatePatternHeaderTests(TestCase):
 - Follow AGENTS.md conventions for any code changes
 
 ### Security Note
-- Treat the remote `PATTERN_HEADER_URL` content as **trusted** input only. The header contains inline JavaScript, and the update script will write it into a template that is served to users. If the remote source can be tampered with, this becomes a supply-chain XSS risk.
+- Since `PATTERN_HEADER_URL` is considered a trusted source, this is acceptable for your use case.
+- Still note: it writes HTML (with inline JS) into a served template. Keep the source controlled.
 
 ### Common Issues
 - If header doesn't appear: check template include path
@@ -516,13 +512,10 @@ class UpdatePatternHeaderTests(TestCase):
 ## Decision Points
 
 Before implementation, decide:
-1. **Template approach**: Option 1 (include) or Option 2 (template tag)?
-   - **Recommendation**: Option 1
-2. **Update script**: Option A (standalone) or Option B (management command)?
+1. **Update mechanism**: Option A (standalone script) or Option B (management command)?
    - **Recommendation**: Option B
-3. **File location for pattern header**:
-   - If Option 1: `pdf_checker_app_templates/pdf_checker_app/includes/pattern_header.html`
-   - If Option 2: `pdf_checker_app/lib/pattern_header.html`
+2. **File location for pattern header**:
+   - `pdf_checker_app_templates/pdf_checker_app/includes/pattern_header.html`
 
 ---
 
@@ -533,9 +526,7 @@ Before implementation, decide:
 
 2. **Do you want the update mechanism to write into templates or into a “source-of-truth” file?**
    - If you want a cleaner separation, we could store the downloaded upstream HTML in `pdf_checker_app/lib/pattern_header_upstream.html` and maintain a small template partial that includes/embeds it.
-   - This would require either:
-     - a template tag (Option 2), or
-     - a build step that copies `lib/pattern_header_upstream.html` into the templates include file.
+   - This would require a build step that copies `lib/pattern_header_upstream.html` into the templates include file.
 
 3. **Do you need a “pin” / reproducibility mechanism?**
    - Example: store `ETag`/`Last-Modified` response headers alongside the downloaded file, or log them, so you can tell what version is deployed.
