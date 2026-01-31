@@ -7,9 +7,9 @@ Avoid calling OpenRouter (sync and cron) when veraPDF reports the PDF is accessi
 
 ## Context snapshot (Jan 30, 2026)
 - veraPDF compliance is parsed via `get_verapdf_compliant()` and `get_accessibility_assessment()` in `pdf_checker_app/lib/pdf_helpers.py`.
-- Synchronous processing always attempts OpenRouter after successful veraPDF, regardless of accessibility result (`attempt_synchronous_processing()` calls `attempt_openrouter_sync()` unconditionally).
-- Cron summary generation uses `scripts/process_openrouter_summaries.py` and selects any completed doc that has a veraPDF result and no OpenRouter summary; it does not check `is_accessible`.
-- `VeraPDFResult.is_accessible` exists but is not populated by `save_verapdf_result()` yet (defaults to False). Plan should account for this.
+- Synchronous processing now skips OpenRouter when `VeraPDFResult.is_accessible` is true.
+- Cron summary generation now excludes documents with `verapdf_result__is_accessible=True`.
+- `save_verapdf_result()` now persists `is_accessible` based on veraPDF compliance (defaults to `False` when compliance is missing).
 
 ## Relevant code locations
 - `pdf_checker_app/lib/pdf_helpers.py`:
@@ -31,29 +31,20 @@ Avoid calling OpenRouter (sync and cron) when veraPDF reports the PDF is accessi
 - The veraPDF compliance boolean is the single source of truth for accessibility.
 - An accessible PDF should **not** have OpenRouter suggestions generated (sync or cron).
 
-## Refactor plan
+## Implementation summary
 1. **Persist accessibility on veraPDF save**
-   - Update `save_verapdf_result()` to set `is_accessible` using `get_verapdf_compliant()`.
-   - If compliance is `None`, decide on a default (likely `False`, or leave existing value). Document in code comments.
+   - `save_verapdf_result()` now sets `is_accessible` using `get_verapdf_compliant()` and defaults to `False` when compliance is missing.
 
 2. **Short-circuit OpenRouter in sync processing**
-   - In `attempt_synchronous_processing()`, after `attempt_verapdf_sync()` succeeds, load the veraPDF result and skip `attempt_openrouter_sync()` when `is_accessible` is `True`.
-   - Log a concise `info` message when skipping.
+   - `attempt_synchronous_processing()` loads `VeraPDFResult` and skips OpenRouter when `is_accessible` is `True`.
+   - Logs an `info` message when skipping.
 
 3. **Prevent cron from selecting accessible docs**
-   - Update `find_pending_summaries()` to exclude documents with `verapdf_result__is_accessible=True`.
-   - Ensure both “no summary” and “pending/failed summary” queries include this filter.
+   - `find_pending_summaries()` excludes `verapdf_result__is_accessible=True` in both selection branches.
 
-4. **Safety/edge handling**
-   - If `VeraPDFResult.is_accessible` is missing or `None`, treat it as “needs suggestions” to preserve current behavior for unknown cases.
-   - Confirm existing OpenRouter summaries remain displayable (no deletion required).
-
-5. **Tests to add/adjust**
-   - `test_sync_processing.py`
-     - Add a test that `attempt_synchronous_processing()` skips OpenRouter when `is_accessible=True`.
-     - Add a test that OpenRouter still runs when `is_accessible=False` (or `None`).
-   - `test_polling_endpoints.py` (if summary fragment behavior depends on presence/absence of OpenRouter summary, consider no changes unless behavior needs updates).
-   - Add tests for `find_pending_summaries()` to ensure accessible docs are excluded.
+4. **Tests added/adjusted**
+   - `test_sync_processing.py` covers the sync skip behavior and OpenRouter cron selection for accessible/non-accessible docs.
+   - No changes required in `test_polling_endpoints.py`.
 
 ## Implementation notes
 - Prefer single-return functions and avoid nested defs (per `AGENTS.md`).
@@ -64,6 +55,6 @@ Avoid calling OpenRouter (sync and cron) when veraPDF reports the PDF is accessi
 - Accessible PDFs: veraPDF completes, document is marked completed, OpenRouter is not called, and no summary is queued by cron.
 - Not-accessible PDFs: OpenRouter behaves as today (sync attempt, cron fallback).
 
-## Suggested verification
-- Run unit tests: `uv run ./run_tests.py`.
-- Manual smoke: upload an accessible PDF and confirm suggestions are not generated.
+## Verification
+- Unit tests: `uv run ./run_tests.py` (confirmed passing).
+- Manual smoke: upload an accessible PDF and confirm suggestions are not generated (pending).
