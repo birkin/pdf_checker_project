@@ -555,3 +555,82 @@ Before implementation, decide:
 
 6. **Accessibility / semantics**
    - Confirm that the skip-link targets (`#bul_pl_header_end`, etc.) don’t conflict with IDs elsewhere in your pages.
+
+---
+
+## Addendum: Preserve an Exact Upstream Copy (in-repo) While Keeping HTML Valid
+
+Goal:
+- Keep `base.html` integration simple.
+- Ensure HTML validity (especially: stylesheet `<link>` tags belong in `<head>`).
+- Keep a **clear, exact copy** in the repo of the HTML retrieved from the upstream PHP source.
+
+### Option 1: Save Two Files on Update (Upstream "source-of-truth" + Template-ready include)
+
+**Idea**: The update mechanism (management command) writes:
+1. An exact upstream snapshot file (byte-for-byte / text-for-text).
+2. A second “template-ready” include file that is safe to `{% include %}` from `base.html`.
+
+**Proposed file locations**:
+- Exact upstream snapshot (not directly included by templates):
+  - `pdf_checker_project/pdf_checker_app/lib/pattern_header_upstream.html`
+- Template include used by `base.html`:
+  - `pdf_checker_project/pdf_checker_app/pdf_checker_app_templates/pdf_checker_app/includes/pattern_header.html`
+
+**How `base.html` stays simple**:
+- Keep what we have now:
+  - `<link rel="stylesheet" href="https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css">` in `<head>`
+  - `{% include "pdf_checker_app/includes/pattern_header.html" %}` at the start of `<body>`
+
+**How HTML validity is preserved**:
+- The update step strips (or otherwise omits) any upstream `<link ...>` tags from the template include, because they would be invalid in `<body>`.
+- The exact upstream file remains unmodified, and is the audit/debug reference.
+
+**Pros**:
+- Satisfies the “exact-copy in repo” requirement unambiguously.
+- Keeps template integration to a single `{% include %}` in the body.
+- Keeps HTML validity.
+
+**Cons**:
+- Requires a small transform step during update (even if the source is trusted).
+
+### Option 2: Split into Two Template Includes (Head include + Body include) + Keep Upstream Snapshot
+
+**Idea**: Still store an exact upstream snapshot in-repo, but generate two template fragments:
+- One fragment intended for `<head>` (only the upstream `<link>` dependencies).
+- One fragment intended for `<body>` (the remainder of the upstream markup).
+
+**Proposed file locations**:
+- Exact upstream snapshot:
+  - `pdf_checker_project/pdf_checker_app/lib/pattern_header_upstream.html`
+- Template include for `<head>`:
+  - `pdf_checker_project/pdf_checker_app/pdf_checker_app_templates/pdf_checker_app/includes/pattern_header_head.html`
+- Template include for `<body>`:
+  - `pdf_checker_project/pdf_checker_app/pdf_checker_app_templates/pdf_checker_app/includes/pattern_header.html`
+
+**How `base.html` stays simple**:
+- Add one include to `<head>` and one include to the top of `<body>`:
+  - `{% include "pdf_checker_app/includes/pattern_header_head.html" %}`
+  - `{% include "pdf_checker_app/includes/pattern_header.html" %}`
+
+**How HTML validity is preserved**:
+- All stylesheet `<link>` tags live in the head include.
+- The body include contains only body-safe markup.
+
+**Pros**:
+- Very explicit: “this part goes in head, this part goes in body”.
+- Makes it easy to add additional upstream head dependencies later (if the upstream changes).
+
+**Cons**:
+- Adds a second include to `base.html`.
+- Still requires an update-time split/transform step.
+
+### Notes (applies to both options)
+
+- The “exact upstream snapshot” file is intended as:
+  - a reviewable artifact in git (diffable when upstream changes)
+  - a local source of truth for what was fetched
+  - input to the transformation that produces the template fragments
+- The template fragments are intended as:
+  - valid HTML when inserted into their respective locations (`<head>` vs `<body>`)
+  - stable includes (no Django templating logic required inside the upstream snapshot)
