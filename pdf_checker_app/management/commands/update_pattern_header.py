@@ -1,5 +1,19 @@
 """
 Updates the pattern header HTML from a remote source.
+
+The raw html is saved to `lib/pattern_header_upstream.html`.
+
+Slight parsing is then done to extract the head and body fragments to ensure valid html after the includes.
+- The head fragment is saved to `pdf_checker_app_templates/pdf_checker_app/includes/pattern_header/head.html`.
+- The body fragment is saved to `pdf_checker_app_templates/pdf_checker_app/includes/pattern_header/body.html`.
+
+Usage:
+    python manage.py update_pattern_header
+
+Notes:
+- This update will be run **manually only** (never auto-run).
+- The `PATTERN_HEADER_URL` setting comes from the `.env`.
+- The `PATTERN_HEADER_URL` source is considered **trusted**.
 """
 
 import pathlib
@@ -112,6 +126,6 @@ class Command(BaseCommand):
         save_pattern_header(content, upstream_path)
         save_pattern_header(head_content, head_path)
         save_pattern_header(body_content, body_path)
-        self.stdout.write(self.style.SUCCESS(f'Saved upstream snapshot to: {upstream_path}'))
-        self.stdout.write(self.style.SUCCESS(f'Saved head include to: {head_path}'))
-        self.stdout.write(self.style.SUCCESS(f'Saved body include to: {body_path}'))
+        self.stdout.write(self.style.SUCCESS(f'Saved upstream snapshot to: {upstream_path}\n'))
+        self.stdout.write(self.style.SUCCESS(f'Saved head include to: {head_path}\n'))
+        self.stdout.write(self.style.SUCCESS(f'Saved body include to: {body_path}\n'))
