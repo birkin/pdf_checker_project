@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from pdf_checker_app.forms import PDFUploadForm
-from pdf_checker_app.lib import pdf_helpers, sync_processing_helpers, version_helper
+from pdf_checker_app.lib import markdown_helpers, pdf_helpers, sync_processing_helpers, version_helper
 from pdf_checker_app.lib.version_helper import GatherCommitAndBranchData
 from pdf_checker_app.models import OpenRouterSummary, PDFDocument, VeraPDFResult
 
@@ -35,9 +35,11 @@ def info(request):
     """
     log.debug('starting info()')
     ## prep data ----------------------------------------------------
+    info_html: str = markdown_helpers.load_markdown_from_lib('info.md')
     context = {
         'quote': 'The best life is the one in which the creative impulses play the largest part and the possessive impulses the smallest.',
         'author': 'Bertrand Russell',
+        'info_html': info_html,
     }
     ## prep response ------------------------------------------------
     if request.GET.get('format', '') == 'json':
