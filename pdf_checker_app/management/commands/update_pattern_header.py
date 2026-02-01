@@ -20,6 +20,7 @@ import pathlib
 from argparse import ArgumentParser
 
 import httpx
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -49,17 +50,18 @@ def split_pattern_header(content: str) -> tuple[str, str]:
     """
     Splits the upstream pattern header into head and body fragments.
     """
-    target_link = '<link rel="stylesheet" href="https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css"/>'
-    target_line = f'{target_link}\n'
+    soup = BeautifulSoup(content, 'html.parser')
     head_content = ''
     body_content = content
+    link_tag = soup.find(
+        'link',
+        href='https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css',
+    )
 
-    if target_line in content:
-        head_content = f'{target_link}\n'
-        body_content = content.replace(target_line, '', 1)
-    elif target_link in content:
-        head_content = f'{target_link}\n'
-        body_content = content.replace(target_link, '', 1)
+    if link_tag:
+        head_content = f'{link_tag}\n'
+        link_tag.extract()
+        body_content = soup.decode_contents()
 
     return head_content, body_content
 
