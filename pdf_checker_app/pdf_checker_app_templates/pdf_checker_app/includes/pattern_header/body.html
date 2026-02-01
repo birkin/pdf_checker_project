@@ -59,7 +59,7 @@
 						<span class="bul_pl_header_menu_close-button" role="button">×</span> <img id="bul_pl_brown_shield_menu_svg" style="height : 44px ; " alt="Brown University" src="https://library.brown.edu/common/includes/img/BUL_logo_blkletters.svg" /> 
 						<div id="bul_pl_header_menu_text">
 							<ul>
-																<li class="bul_pl_header_show_tiny_screen"><a href="https://search.library.brown.edu/">Search</a></li>
+								<li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='{% url 'info_url' %}'>About</a></li><li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='{% url 'pdf_upload_url' %}'>Check PDF</a></li><li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='' style='text-decoration : none ; '>Accessibility Resources</a><li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='https://ithelp.brown.edu/kb/articles/create-an-accessible-pdf'>Create an Accessible PDF</a></li><li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='https://ithelp.brown.edu/kb/accessibility-2'>OIT Accessibility Resources</a></li><li class='bul_pl_subheader_trigram_links bul_pl_header_show_tiny_screen'><a href='mailto:library-technology-group@brown.edu?subject=PDF-Checker%20feedback'>Feedback</a></li>								<li class="bul_pl_header_show_tiny_screen"><a href="https://search.library.brown.edu/">Search</a></li>
 								<li class="bul_pl_header_show_small_screen"><a href="https://library.brown.edu/libweb/proxy.php">Off-Campus Access</a></li>
 								<li class="bul_pl_header_show_small_screen"><a href="https://library.brown.edu/libweb/my_library_account_login.php">My Library Account</a></li>
 								<li><a href="https://lib.brown.edu/using-library/borrow-request-renew">Borrow, Request, & Renew</a></li>
@@ -134,17 +134,17 @@
 
 
 <!-- begin bul_pl_subheader -->
-<div id='bul_pl_subheader' style='background-color :  ; ' >
+<div id='bul_pl_subheader' style='background-color : #eed4aa ; ' >
 	<div id='bul_pl_subheader_site_title'>
-		<a href='subheader_end' id='bul_pl_skip_subheader'>Skip  subheader links</a>
+		<a href='subheader_end' id='bul_pl_skip_subheader'>Skip 5 subheader links</a>
 	</div>
-	<nav id='bul_pl_subheader__menu' aria-label=' menu' class='bul_pl_subheader_nav_menu'>
+	<nav id='bul_pl_subheader_PDF_Accessibility_Checker_menu' aria-label='PDF Accessibility Checker menu' class='bul_pl_subheader_nav_menu'>
 		<div id='bul_pl_subheader_site_links'>
 			<ul id='bul_pl_subheader_links'>
-				<a href=''><span style='position: absolute !important;
+				<a href='{% url 'info_url' %}'><span style='position: absolute !important;
 				 height: 1px; width: 1px; 
 				 overflow: hidden;
-				 clip: rect(1px, 1px, 1px, 1px);'>Home</span><svg class='icon_house_home_svg' style='height : 25px ; width : 25px ; fill :  ; margin-right : 20px ; '><use xlink:href='#house_home' /></svg></a> 
+				 clip: rect(1px, 1px, 1px, 1px);'>Home</span><svg class='icon_house_home_svg' style='height : 25px ; width : 25px ; fill : var(--brown_brown) ; margin-right : 20px ; '><use xlink:href='#house_home' /></svg></a><li class='bul_pl_subheader_single_link'><a href='{% url 'info_url' %}' style='text-decoration : none ; color : var(--brown_brown) ;'>About</a></li><li class='bul_pl_subheader_single_link'><a href='{% url 'pdf_upload_url' %}' style='text-decoration : none ; color : var(--brown_brown) ;'>Check PDF</a></li><li class='bul_pl_subheader_links_trigger'><a href='javascript:;' onclick='javascript:void(0)' style='text-decoration : none ; color : var(--brown_brown) ;'>Accessibility Resources&nbsp;&nbsp;&dtrif;</a><div class='bul_pl_subheader_sublinks_container'><ul class='bul_pl_subheader_sublinks'><li><a href='https://ithelp.brown.edu/kb/articles/create-an-accessible-pdf'>Create an Accessible PDF</a></li><li><a href='https://ithelp.brown.edu/kb/accessibility-2'>OIT Accessibility Resources</a></li></ul></div></li><li class='bul_pl_subheader_single_link'><a href='mailto:library-technology-group@brown.edu?subject=PDF-Checker%20feedback' style='text-decoration : none ; color : var(--brown_brown) ;'>Feedback</a></li> 
 			</ul>
 		</div>
 	</nav>
