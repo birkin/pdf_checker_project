@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from django.test import SimpleTestCase as TestCase
 
 from pdf_checker_app.management.commands import update_pattern_header
@@ -25,6 +26,13 @@ class PatternHeaderSplitTest(TestCase):
 
         head_content, body_content = update_pattern_header.split_pattern_header(content)
 
-        self.assertEqual(head_content, f'{link_tag}\n')
-        self.assertNotIn(link_tag, body_content)
+        head_soup = BeautifulSoup(head_content, 'html.parser')
+        parsed_link = head_soup.find('link')
+        self.assertIsNotNone(parsed_link)
+        self.assertEqual(
+            parsed_link.get('href'),
+            'https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css',
+        )
+        self.assertEqual(parsed_link.get('rel'), ['stylesheet'])
+        self.assertNotIn('bul_patterns.css', body_content)
         self.assertIn('header content', body_content)

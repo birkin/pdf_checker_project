@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "Django~=5.2.0",
     "httpx~=0.28.0",  # no current http requests; but here cuz we're switching to this from `requests`
+    "beautifulsoup4~=4.12.0",
     "python-dotenv~=1.1.0",
     "python-magic~=0.4.0",  # File type detection
     "trio~=0.30.0",
