@@ -36,3 +36,20 @@ class PatternHeaderSplitTest(TestCase):
         self.assertEqual(parsed_link.get('rel'), ['stylesheet'])
         self.assertNotIn('bul_patterns.css', body_content)
         self.assertIn('header content', body_content)
+
+
+class PatternHeaderPlaceholderReplacementTest(TestCase):
+    """
+    Checks placeholder replacement for the pattern header.
+    """
+
+    def test_apply_placeholder_replacements_updates_about_link(self) -> None:
+        """
+        Checks apply_placeholder_replacements() updates DYNAMIC_ABOUT_URL.
+        """
+        body_content = '<a href="DYNAMIC_ABOUT_URL">About</a>'
+
+        updated_content = update_pattern_header.apply_placeholder_replacements(body_content)
+
+        self.assertIn("{% url 'info_url' %}", updated_content)
+        self.assertNotIn('DYNAMIC_ABOUT_URL', updated_content)

@@ -66,6 +66,14 @@ def split_pattern_header(content: str) -> tuple[str, str]:
     return head_content, body_content
 
 
+def apply_placeholder_replacements(body_content: str) -> str:
+    """
+    Replaces placeholder values in the pattern header body content.
+    """
+    updated_content = body_content.replace('DYNAMIC_ABOUT_URL', "{% url 'info_url' %}")
+    return updated_content
+
+
 def save_pattern_header(content: str, target_path: pathlib.Path) -> None:
     """
     Saves pattern header HTML to the target file.
@@ -120,6 +128,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f'Fetched {len(content)} characters')
         head_content, body_content = split_pattern_header(content)
+        body_content = apply_placeholder_replacements(body_content)
 
         if dry_run:
             self.stdout.write(self.style.WARNING('Dry run - not saving'))
