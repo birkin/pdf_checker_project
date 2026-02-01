@@ -13,7 +13,7 @@
 
 This is an _experimental_ webapp. It has the following purposes:
 
-- We want to see if we can use a large-language model (LLM) to give staff and users friendly, useful concrete suggesions for making their PDFs accessible.
+- We want to see if we can use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
 
 - It might be possible to achieve some of this functionality without using an LLM, but we know we'll soon be using a very similar architecture for experimenting with enabling users to upload images for suggested alt-text -- in preparation for implementing API-calls. 
 
@@ -55,7 +55,7 @@ Try out the veraPDF [demo][vpdf_demo] on their website.
 
 veraPDF is terrific, but its output can be overwhelming for users. It uses a profile which contains a list of rules, and it checks every relevant PDF element against those rules. 
 
-The result is that a PDF with 50 pages might generate thousands of failures -- even though its possible that only a few fixes are needed to make the PDF accessible. 
+The result is that a PDF with 50 pages might generate thousands of failures -- even though it's possible that only a few fixes are needed to make the PDF accessible. 
 
 
 ---
