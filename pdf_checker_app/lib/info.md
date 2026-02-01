@@ -11,13 +11,13 @@
 
 ## Purpose 
 
-This is an _experimental_ webapp. It has the following purposes:
+This is an _experimental_ webapp. It serves the following purposes:
 
-- To see if we could use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
+- To see if we could use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions to make their PDFs accessible.
 
 - To experiment with an "upload and hand-off-to-a-model" architecture because it could be extremely useful for improving the accessibility of a variety of other media -- such as uploading images for suggested alt-text, and audios/videos for suggested description and/or captions. 
 
-- To show [OIT][oit] and [CCV][ccv] a working version of this architecture -- so we can explore ways we mightwork with them to use their models for improved privacy, quality, and scalability. 
+- To show [OIT][oit] and [CCV][ccv] a working implementation of this architecture -- so we can explore ways we might work with them to use their models for improved privacy, quality, and scalability. 
 
 ---
 
