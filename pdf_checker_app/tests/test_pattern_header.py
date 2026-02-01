@@ -36,3 +36,22 @@ class PatternHeaderSplitTest(TestCase):
         self.assertEqual(parsed_link.get('rel'), ['stylesheet'])
         self.assertNotIn('bul_patterns.css', body_content)
         self.assertIn('header content', body_content)
+
+    def test_split_pattern_header_preserves_django_tag(self) -> None:
+        """
+        Checks split_pattern_header() preserves Django template tags.
+        """
+        link_tag = '<link rel="stylesheet" href="https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css" />'
+        content = '\n'.join(
+            [
+                '<!-- begin bul_pl_header -->',
+                link_tag,
+                '<a href="{% url "info_url" %}">About</a>',
+                '</div>',
+            ]
+        )
+
+        head_content, body_content = update_pattern_header.split_pattern_header(content)
+
+        self.assertIn(link_tag, head_content)
+        self.assertIn('{% url "info_url" %}', body_content)

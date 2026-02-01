@@ -17,10 +17,10 @@ Notes:
 """
 
 import pathlib
+import re
 from argparse import ArgumentParser
 
 import httpx
-from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -50,20 +50,28 @@ def split_pattern_header(content: str) -> tuple[str, str]:
     """
     Splits the upstream pattern header into head and body fragments.
     """
-    soup = BeautifulSoup(content, 'html.parser')
     head_content = ''
     body_content = content
-    link_tag = soup.find(
-        'link',
-        href='https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css',
+    link_pattern = re.compile(
+        r'(<link\s+[^>]*href=[\'\"]https://dlibwwwcit.services.brown.edu/common/css/bul_patterns\.css[\'\"][^>]*>)',
+        re.IGNORECASE,
     )
+    match = link_pattern.search(content)
 
-    if link_tag:
+    if match:
+        link_tag = match.group(1)
         head_content = f'{link_tag}\n'
-        link_tag.extract()
-        body_content = soup.decode_contents()
+        body_content = content.replace(link_tag, '', 1)
 
     return head_content, body_content
+
+
+# def apply_placeholder_replacements(body_content: str) -> str:
+#     """
+#     Replaces placeholder values in the pattern header body content.
+#     """
+#     updated_content = body_content.replace('DYNAMIC_ABOUT_URL', '{% url "info_url" %}')
+#     return updated_content
 
 
 def save_pattern_header(content: str, target_path: pathlib.Path) -> None:
