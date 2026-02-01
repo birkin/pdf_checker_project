@@ -1,5 +1,7 @@
 # Plan: convert `DYNAMIC_ABOUT_URL` in pattern-library header to correct Django URL
 
+Before any code-changes, review `pdf_checker_project/AGENTS.md` for coding-directives to follow.
+
 ## Goal
 Replace the literal string `DYNAMIC_ABOUT_URL` (appears twice in the generated pattern header include) with a URL that correctly points to the Django `info_url` endpoint in both:
 
@@ -44,20 +46,19 @@ Because `body.html` is produced by the management command `update_pattern_header
 
   This keeps link generation authoritative and environment-aware.
 
+  User-update: I've attempted to do this. Not sure if the single/double quotes are correct, but let's see if it works.
+
 Notes:
 - The `{% url %}` tag is available by default; you do not need to add `{% load %}`.
 - This approach does **not** require touching every view’s `context`.
 
 ### Step 2: (Optional, but likely desirable) Replace other placeholders similarly
-The same header also contains other placeholders:
+
+User-update: I know the pattern-library header also contains other placeholders:
 - `DYNAMIC_CHECK-PDF_URL`
 - `DYNAMIC__SITE`
 
-Even though this task is scoped to `DYNAMIC_ABOUT_URL`, it may be worth handling these in the same pass so the header is consistently correct after each update. Likely mappings:
-- `DYNAMIC_CHECK-PDF_URL` -> `{% url 'pdf_upload_url' %}` (points at `pdf_uploader/`)
-- `DYNAMIC__SITE` -> `{% url 'root_url' %}` (or `{% url 'info_url' %}` if “home” should be About)
-
-(Decide these mappings explicitly before implementing, to avoid surprising UX changes.)
+But these are temporarily out-of-scope for this task -- so ignore those.
 
 ### Step 3: Add/adjust tests
 Add a focused test in `pdf_checker_app/tests/` validating the replacement behavior (separate from the existing split test):
@@ -68,6 +69,8 @@ This prevents regressions if the update command is edited later.
 ### Step 4: Verify mounted-prefix behavior in Passenger
 If Passenger deployment currently **does not** automatically include `/pdf_checker` in reversed URLs, implement the fallback:
 - Add `FORCE_SCRIPT_NAME` to production settings via environment variable (only on the server), e.g. `FORCE_SCRIPT_NAME="/pdf_checker"`.
+
+User-update: I know the server-deployment already sets `pdf_checker` properly.
 
 This does not need to be enabled for runserver.
 
@@ -85,6 +88,8 @@ In that context-driven approach, I recommend the placeholder name:
 - `pattern_header_about_url`
 
 because it’s specific enough to avoid collisions.
+
+User-update: we will avoid this alternative approach for now.
 
 ## Acceptance checks
 - In dev (runserver): About link points to `/info/`.
