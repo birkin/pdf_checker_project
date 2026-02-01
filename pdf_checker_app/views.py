@@ -37,8 +37,7 @@ def info(request):
     ## prep data ----------------------------------------------------
     info_html: str = markdown_helpers.load_markdown_from_lib('info.md')
     context = {
-        'quote': 'The best life is the one in which the creative impulses play the largest part and the possessive impulses the smallest.',
-        'author': 'Bertrand Russell',
+        'foo': 'bar',
         'info_html': info_html,
     }
     ## prep response ------------------------------------------------
