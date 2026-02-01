@@ -8,6 +8,8 @@ Replace the literal string `DYNAMIC_ABOUT_URL` (appears twice in the generated p
 - `runserver` local dev (no `/pdf_checker` prefix)
 - Passenger deployment (must include `/pdf_checker` prefix)
 
+User-update: I've updated the literal string `DYNAMIC_ABOUT_URL` to `{% url 'info_url' %}` in both places for the "About" link. Note that I made an "About2" link as a backup, that has also has an original-sytle `DYNAMIC_ABOUT_URL` placeholder. Ignore the "About2" link for now.
+
 ## Current state (repo facts)
 - The placeholder appears twice in:
   - `pdf_checker_app/pdf_checker_app_templates/pdf_checker_app/includes/pattern_header/body.html`
@@ -59,6 +61,8 @@ User-update: I know the pattern-library header also contains other placeholders:
 - `DYNAMIC__SITE`
 
 But these are temporarily out-of-scope for this task -- so ignore those.
+
+Note that I made an "About2" link as a backup, that has also has an original-sytle `DYNAMIC_ABOUT_URL` placeholder. Ignore the "About2" link for now.
 
 ### Step 3: Add/adjust tests
 Add a focused test in `pdf_checker_app/tests/` validating the replacement behavior (separate from the existing split test):
