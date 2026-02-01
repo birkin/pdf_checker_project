@@ -10,7 +10,7 @@
     {% include "pdf_checker_app/includes/pattern_header/head.html" %}
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     {% include "pdf_checker_app/includes/pattern_header/body.html" %}
     <div class="container">
         {% if messages %}

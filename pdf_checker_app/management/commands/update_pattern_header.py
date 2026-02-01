@@ -28,6 +28,8 @@ from django.core.management.base import BaseCommand
 def fetch_pattern_header(url: str) -> str:
     """
     Fetches pattern header HTML from the given URL.
+
+    Called by: handle()
     """
     response: httpx.Response = httpx.get(url, timeout=30.0)
     response.raise_for_status()
@@ -37,6 +39,8 @@ def fetch_pattern_header(url: str) -> str:
 def resolve_target_paths() -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
     """
     Resolves the target paths for the pattern header files.
+
+    Called by: handle()
     """
     app_dir: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent.parent
     upstream_path: pathlib.Path = app_dir / 'lib' / 'pattern_header_upstream.html'
@@ -49,6 +53,8 @@ def resolve_target_paths() -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
 def split_pattern_header(content: str) -> tuple[str, str]:
     """
     Splits the upstream pattern header into head and body fragments.
+
+    Called by: handle()
     """
     head_content = ''
     body_content = content
@@ -66,17 +72,11 @@ def split_pattern_header(content: str) -> tuple[str, str]:
     return head_content, body_content
 
 
-# def apply_placeholder_replacements(body_content: str) -> str:
-#     """
-#     Replaces placeholder values in the pattern header body content.
-#     """
-#     updated_content = body_content.replace('DYNAMIC_ABOUT_URL', '{% url "info_url" %}')
-#     return updated_content
-
-
 def save_pattern_header(content: str, target_path: pathlib.Path) -> None:
     """
     Saves pattern header HTML to the target file.
+
+    Called by: handle()
     """
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding='utf-8')
@@ -92,6 +92,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser: ArgumentParser) -> None:
         """
         Adds command-line arguments.
+
+        Called by: Django management command runner
         """
         parser.add_argument(
             '--url',
@@ -107,6 +109,8 @@ class Command(BaseCommand):
     def handle(self, *args: object, **options: object) -> None:
         """
         Executes the command.
+
+        Called by: Django management command runner
         """
         options_dict: dict[str, object] = options
         url_option = options_dict.get('url')
@@ -139,3 +143,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Saved upstream snapshot to: {upstream_path}\n'))
         self.stdout.write(self.style.SUCCESS(f'Saved head include to: {head_path}\n'))
         self.stdout.write(self.style.SUCCESS(f'Saved body include to: {body_path}\n'))
+
+        ## end def handle()
+
+    ## end class Command()

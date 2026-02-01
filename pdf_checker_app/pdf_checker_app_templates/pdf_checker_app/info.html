@@ -1,0 +1,18 @@
+{% extends "pdf_checker_app/base.html" %}
+{% load static %}
+
+{% block title %}About{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'pdf_checker_app/css/info.css' %}">
+{% endblock %}
+
+{% block body_class %}info-page{% endblock %}
+
+{% block content %}
+
+    <div class="info-markdown">
+        {{ info_html|safe }}
+    </div>
+    
+{% endblock %}

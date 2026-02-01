@@ -5,17 +5,21 @@
  - Styles the standalone /info/ page rendered by pdf_checker_app.views.info() using template info.html.
 
  Important
- - This file intentionally defines .info-container for the standalone page layout.
- - Base-template pages use base.css, which defines .container with different layout rules.
- - Do not load both files on the same page unless you also rename/scope selectors.
+ - This file now scopes overrides to .info-page so it can safely load alongside base.css.
 */
 
 body {
     font-family: Verdana, Geneva, Tahoma, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background-color: #f0f0f0;
+    background-color: #ffffff;
     margin: 0;
     height: 100vh;
     font-size: 1rem;
+}
+
+.info-page .container {
+    max-width: 62.5rem;
+    width: min(92vw, 62.5rem);
+    margin: 0 auto 0 2rem;
 }
 
 .info-container {
