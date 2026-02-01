@@ -13,11 +13,11 @@
 
 This is an _experimental_ webapp. It has the following purposes:
 
-- We want to see if we can use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
+- We wanted to see if we could use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
 
-- It might be possible to achieve some of this functionality without using an LLM, but we know we'll soon be using a very similar architecture for experimenting with enabling users to upload images for suggested alt-text -- in preparation for implementing API-calls. 
+- We wanted to experiment with an "upload and hand-off-to-a-model" architecture because it could be extremely useful for improving the accessibility of a variety of other media -- such as uploading images for suggested alt-text, and audios/videos for suggested description and/or captions. 
 
-- We wanted to show [OIT][oit] and [CCV][ccv] a working architecture, so we can explore ways we work with them to use their models for privacy and scalability reasons. 
+- We wanted to show [OIT][oit] and [CCV][ccv] a working version of this architecture -- so we can explore ways we mightwork with them to use their models for improved privacy, quality, and scalability. 
 
 ---
 
