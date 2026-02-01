@@ -13,11 +13,11 @@
 
 This is an _experimental_ webapp. It has the following purposes:
 
-- We wanted to see if we could use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
+- To see if we could use a large-language model (LLM) to give staff and users friendly, useful, concrete suggestions for making their PDFs accessible.
 
-- We wanted to experiment with an "upload and hand-off-to-a-model" architecture because it could be extremely useful for improving the accessibility of a variety of other media -- such as uploading images for suggested alt-text, and audios/videos for suggested description and/or captions. 
+- To experiment with an "upload and hand-off-to-a-model" architecture because it could be extremely useful for improving the accessibility of a variety of other media -- such as uploading images for suggested alt-text, and audios/videos for suggested description and/or captions. 
 
-- We wanted to show [OIT][oit] and [CCV][ccv] a working version of this architecture -- so we can explore ways we mightwork with them to use their models for improved privacy, quality, and scalability. 
+- To show [OIT][oit] and [CCV][ccv] a working version of this architecture -- so we can explore ways we mightwork with them to use their models for improved privacy, quality, and scalability. 
 
 ---
 
@@ -27,6 +27,8 @@ This is an _experimental_ webapp. It has the following purposes:
 ### Privacy
 
 **Don't submit anything you want to keep private.** 
+
+We don't send the PDF directly to any models, only the parsed-report, which doesn't contain detailed content information. But we may experiment with the the data that is sent to the models, so just to be safe, don't submit anything you want to keep private.
 
 Official Brown models offer privacy guarantees that this webapp doesn't. 
 
@@ -40,7 +42,7 @@ Our free account is limited to 50 requests per day.
 
 Due to this, we're initially only opening this up to library-staff. 
 
-If this proves useful, and we're able to access a Brown model, we'll open this up to the Brown community, and implement API features on the drawing-board.
+If this proves useful, and we're able to access a Brown model, we'll open this up to the Brown community, and eventually may implement API features on the drawing-board.
 
 _If we're able to work with OIT and CCV to point to official Brown models, we'll note that here. That would address the privacy, capability, and scalability limitations._
 
@@ -49,7 +51,7 @@ _If we're able to work with OIT and CCV to point to official Brown models, we'll
 
 ## veraPDF
 
-[veraPDF][vpdf] is a widely-used open-source tool for analyzing PDFs for digital-preservation and/or accessibility purposes. This webapp is focusing specifically on accessibility.
+[veraPDF][vpdf] is a widely-used open-source tool for analyzing PDFs for digital-preservation and/or accessibility purposes. This webapp focuses specifically on accessibility.
 
 Try out the veraPDF [demo][vpdf_demo] on their website.
 
@@ -79,7 +81,7 @@ Typically, you'll select and submit your PDF file. Usually within 20-seconds, yo
 
 Copy the url if you want to review or share the report.
 
-If something goes wrong, you'll still be directed to the report page, but it will show either a problem with the veraPDF check (rare), or a problem with the LLM suggestions (more common). Still, save that url and try it again later. We plan to implement a script to check for temporarily failed jobs and retry them.
+If something goes wrong, you'll still be directed to the report page, but it will show either a problem with the veraPDF check (rare), or a problem with the LLM suggestions (more common). Still, save that url and try to access it again later. We plan to implement a script to check for temporarily failed jobs and retry them.
 
 Let us know via the feedback link on each page if you have any problems or questions.
 
