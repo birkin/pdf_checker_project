@@ -37,19 +37,21 @@ class PatternHeaderSplitTest(TestCase):
         self.assertNotIn('bul_patterns.css', body_content)
         self.assertIn('header content', body_content)
 
-
-class PatternHeaderPlaceholderReplacementTest(TestCase):
-    """
-    Checks placeholder replacement for the pattern header.
-    """
-
-    def test_apply_placeholder_replacements_updates_about_link(self) -> None:
+    def test_split_pattern_header_preserves_django_tag(self) -> None:
         """
-        Checks apply_placeholder_replacements() updates DYNAMIC_ABOUT_URL.
+        Checks split_pattern_header() preserves Django template tags.
         """
-        body_content = '<a href="DYNAMIC_ABOUT_URL">About</a>'
+        link_tag = '<link rel="stylesheet" href="https://dlibwwwcit.services.brown.edu/common/css/bul_patterns.css" />'
+        content = '\n'.join(
+            [
+                '<!-- begin bul_pl_header -->',
+                link_tag,
+                '<a href="{% url "info_url" %}">About</a>',
+                '</div>',
+            ]
+        )
 
-        updated_content = update_pattern_header.apply_placeholder_replacements(body_content)
+        head_content, body_content = update_pattern_header.split_pattern_header(content)
 
-        self.assertIn("{% url 'info_url' %}", updated_content)
-        self.assertNotIn('DYNAMIC_ABOUT_URL', updated_content)
+        self.assertIn(link_tag, head_content)
+        self.assertIn('{% url "info_url" %}', body_content)
