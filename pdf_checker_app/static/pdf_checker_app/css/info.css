@@ -20,6 +20,8 @@ body {
     max-width: 62.5rem;
     width: min(92vw, 62.5rem);
     margin: 0 auto 0 2rem;
+    padding-left: 10rem;
+    /* shift content right to match alt-text-maker */
 }
 
 .info-container {
