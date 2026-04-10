@@ -25,4 +25,4 @@ prod = [
 ci_tests = []
 
 [tool.uv]
-exclude-newer = "1 week"
+exclude-newer = "2 days"
